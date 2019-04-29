@@ -1,0 +1,114 @@
+###############################################################################
+# UAGRA R Scripts - camera_trap                                parse_catalog.R
+###############################################################################
+# Functions to parse camera trap data stored on a live filesystem.
+#
+# Notes
+#  The package keeps a copy of the 'catalog' in memory. To minimize filesystem
+# traversals, if a cached version is found (as a .rda file in a project root
+# directory), the package just _updates_ the catalog (how?).
+#
+#
+#
+# version 0.1
+# created fra 20160826
+# updated prea 20160829
+# updated prea 20161106
+# updated ptra 20180119
+###############################################################################
+
+#### list all directories in a directory
+.listDirs <- function(path='.') {
+  dirs <- list.dirs(path=path, full.names=FALSE, recursive=FALSE)
+  dirs <- dirs[-1] # first item is an empty string
+  # exclude directories whose name begins with "@"
+  dirs <- dirs[-grep("^@", dirs)]
+  return(dirs)
+}
+
+#### list all site directories in a repository
+.listSiteDir <- function() {
+  .listDirs(path=getRepository())
+}
+
+
+
+#### parse a camera directory
+parseCameraDir <- function(cameraDirName) {
+  cat('\tparsing camera', cameraDirName, '\n') # silence that whan done
+  oldwd <- getwd()
+  setwd(cameraDirName)
+  ## when a Samba (MAC) writes something on a NAS Synology create @eaDir files
+  ## that create problem therefore I have to remove it
+  # check for metadata
+  if(!file.exists(metadataFileName)) {
+    stop('metadata file is missing!')
+  }
+  cameraMetadata <- parseMetadata()
+  cardDir <- file.info(list.dirs(full.names=FALSE, recursive=FALSE))
+  if ("@eaDir" %in% row.names(cardDir)){
+    cardDir <- cardDir[!row.names(cardDir)=="@eaDir",]
+  }
+  cardDir$name <- row.names(cardDir)
+  # throw away undesired directories (say, Synology NAS create '@eadata' or '@-folders' everywhere), grep out the date pattern we use
+  cardDir <- cardDir[grepl("[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}", cardDir$name),]
+  #@TODO cardDir$name holds a list of date-like strings, that should be useful to convert trapping event dates into trapping events number or whatever. need be, do it here.
+  #@TODO make it parallel
+  cardData <- list()
+  for(ca in cardDir$name) {
+    cData <- getEXIFData(ca)
+    if(nrow(cData)>0) {
+      cardData[[ca]] <- cData
+    }
+  }
+  #flatten list
+  cardData <- do.call('rbind', cardData)
+  #if(is.null(cardData) {
+
+  #}
+  # add camera metadata
+  cardData$Raw.Path <- cameraDirName
+  cardData$Camera.Serial.Number <- cameraMetadata['serial']
+  cardData$Camera.Start.Date.and.Time <- cameraMetadata['start']
+  cardData$Camera.End.Date.and.Time <- cameraMetadata['end']
+  cardData$Camera.Manufacturer <- cameraMetadata['make']
+  cardData$Camera.Model <- cameraMetadata['model']
+  cardData$Camera.Name <- cameraMetadata['name']
+  cardData$Latitude <- as.numeric(cameraMetadata['lat'])
+  cardData$Longitude <- as.numeric(cameraMetadata['lon'])
+  cardData$Sampling.Unit.Name <- cameraDirName
+  setwd(oldwd)
+  invisible(cardData)
+}
+
+#### parse a site directory
+parseSiteDir <- function(siteDirName) {
+  cat('parsing site', siteDirName, '\n') # silence that whan done
+  oldwd <- getwd()
+  setwd(siteDirName)
+
+  # check for metadata
+  if(file.exists(metadataFileName)) {
+    siteMetadata <- parseMetadata()
+  }
+  cameraDir <- file.info(list.dirs(full.names=FALSE, recursive=FALSE))
+  if ("@eaDir" %in% row.names(cameraDir)){
+    cameraDir <- cameraDir[!row.names(cameraDir)=="@eaDir",]
+  }
+  cameraDir$name <- row.names(cameraDir)
+  #@TODO make it parallel
+  cameraData <- list()
+  for(cd in cameraDir$name) {
+    cData <- parseCameraDir(cd)
+    if(nrow(cData)>0) {
+      cameraData[[cd]] <- cData
+    }
+  }
+  #flatten list
+  cameraData <- do.call('rbind', cameraData)
+  # add site metadata
+  cameraData$Raw.Path <- paste(siteDirName, cameraData$Raw.Path, sep='/')
+  #cameraData$Sampling.Unit.Name <- siteMetadata['name']
+  setwd(oldwd)
+  invisible(cameraData)
+}

@@ -1,0 +1,9 @@
+{
+    "path" : "/data/RData/cameratraps",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}
