@@ -1,17 +1,33 @@
-################################################################################
-# processing functions
+###############################################################################
+# UAGRA R Scripts - camera_trap                                           zzz.R
+###############################################################################
+# startup functions for cameratrap package
+# Note: <notes here>
+#
+# version 0.1
+# created prea 20190502 moved startup functions here
+# updated
+###############################################################################
+
+#### create a package environment to store some globals
+.pkgOptions <- new.env(FALSE, globalenv())
+
+assign("EXIFTOOL", NULL, envir=.pkgOptions)
+assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
+assign("repositoryPath", NULL, envir=.pkgOptions)
 
 #### package initialization
 .onLoad <- function(libname, pkgname) {
-  cat("This is package cameratrap\n")
-  #### check for exiftool existence
+  cat("This is package cameratraps\n")
+  ## check for exiftool existence
   # exiftool path can be accessed using get(EXIFTOOL, envir=.pkgOptions)
-  #@TODO this uses UNIX 'which', and should be ported to Win and Mac
-  exiftool <- system2('which', args='exiftool', stdout=TRUE)
-  if('status' %in% names(attributes(exiftool))) { # if system2 returns an error code different than 0 (normal completion), then EXIFTOOL has a 'status' attribute.
-    stop("Error: exiftool not found. Please check and install it.")
-  } else {
+  exiftool <- Sys.which('exiftool')
+  if(exiftool!="") {
     assign("EXIFTOOL", exiftool, envir=.pkgOptions)
     cat("\tEXIFtool found in", exiftool, '\n')
+  } else {
+    msg <- "Error: exiftool not found. Please check and install it."
+    msg <- ifelse(.Platform$OS.type=='windows', c(msg, "\nOn Windows remember to place exiftool.exe in C:\\WINDOWS."), msg)
+    stop(msg)
   }
 }

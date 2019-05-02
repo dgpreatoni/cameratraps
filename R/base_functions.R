@@ -9,28 +9,11 @@
 # updated prea 20160829
 # updated prea 20161106
 # updated prea 20180119
+# updated prea 20190502 moved startup functions to zzz.R
 ###############################################################################
 
-#### create a package environment to store globals
-.pkgOptions <- new.env(FALSE, globalenv())
-assign("EXIFTOOL", NULL, envir=.pkgOptions)
-assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
-assign("repositoryPath", NULL, envir=.pkgOptions)
 
-#### tasks to be performed at package load
-.onLoad <- function(lib, pkg) {
-  cat("This is package cameratrap\n")
-  #### check for exiftool existence
-  # exiftool path can be accessed using get(EXIFTOOL, envir=.pkgOptions)
-  #@TODO this uses UNIX 'which', and should be ported to Win and Mac
-  exiftool <- system2('which', args='exiftool', stdout=TRUE)
-  if('status' %in% names(attributes(exiftool))) { # if system2 returns an error code different than 0 (normal completion), then EXIFTOOL has a 'status' attribute.
-    stop("Error: exiftool not found. Please check and install it.")
-  } else {
-    assign("EXIFTOOL", exiftool, envir=.pkgOptions)
-    cat("\tEXIFtool found in", exiftool, '\n')
-  }
-}
+#### tasks to be performed at package load must go in zzz.R
 
 #### create an empty dataframe for catalog data (column names as per Rovero and Zimmermann 2016)
 .createCatalog <- function() {
@@ -38,16 +21,31 @@ assign("repositoryPath", NULL, envir=.pkgOptions)
   assign("catalogData", catalogData, envir=.pkgOptions)
 }
 
-
-#### returns path to image/video filesystem repository
+#### return path to image/video filesystem repository
 getRepository <- function() {
   get("repositoryPath", envir=.pkgOptions)
 }
 
-#### sets path to image/video filesystem repository
-setRepository <- function(path=getwd()) {
+#### set path to image/video filesystem repository
+setRepository <- function(path=getwd(), create=FALSE) {
   #@TODO add code to check for repository existance
-  assign("repositoryPath", normalizePath(path), envir=.pkgOptions)
+  path <- normalizePath(path, mustWork=FALSE)
+  pathExists <- dir.exists(path)
+  if(pathExists==FALSE) {
+    if(create) {
+      dir.create(path)
+      pathExists <- dir.exists(path) # should be TRUE now
+    } else {
+      stop("Repository ", path, " does not exist.")
+      invisible(NULL)
+    }
+  }
+  # assume path exists
+  if(pathExists) {
+    cat("Repository set to:", path, "\n")
+    assign("repositoryPath", normalizePath(path), envir=.pkgOptions)
+    invisible(path)
+  }
 }
 
 #### pull out EXIF data for all AVI and JPEG files inside a directory

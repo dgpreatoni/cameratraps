@@ -9,4 +9,6 @@ Description: R tools to manage a filesystem-based camera trap images and video r
     License: GPL (>=4.0)
 Encoding: UTF-8
 LazyData: true
-Note: add 'Imports:' here with a comma separated list of needed packages 
+Note: 
+Imports: xlsx
+RoxygenNote: 6.0.1
