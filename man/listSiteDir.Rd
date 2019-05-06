@@ -1,20 +1,23 @@
 \name{listSiteDir}
 \alias{listSiteDir}
 \alias{listCameraDir}
+\alias{listDataDir}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Retrieve and list repository directory contents
 }
 \description{
-Traverse "Site" or "Camera" directories in a \code{cameratraps} repository and list objects threin.
+Traverse "Site", "Camera" or "data dump" (i.e. SD card dump) directories in a \code{cameratraps} repository and list objects threin.
 }
 \usage{
 listSiteDir()
-listCameraDir(cameraName)
+listCameraDir(siteDirName)
+listDataDir(siteDirName, cameraDirName)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{cameraName}{a valid code for a "camera trap" diorectory. See \link{repositoryStructure} for details.}
+  \item{siteDirName}{a valid character string for a "site" directory. See \link{repositoryStructure} for details.}
+  \item{cameraDirName}{a valid character string for a "camera" directory. See \link{repositoryStructure} for details.}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~

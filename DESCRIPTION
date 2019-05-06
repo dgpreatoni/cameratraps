@@ -6,9 +6,9 @@ Author: Damiano G. Preatoni
 Maintainer: Damiano G. Preatoni <prea@uninsubria.it>
 Description: R tools to manage a filesystem-based camera trap images and video repository.
     The package provides functions and data structures to generate and manage image (and video) catalogs and to perform basic calculations for occupancy and spatial capture-recapture modeling.
-    License: GPL (>=4.0)
+License: GPL (>=4.0)
 Encoding: UTF-8
 LazyData: true
 Note: 
-Imports: xlsx
+Imports: lutz,xlsx
 RoxygenNote: 6.0.1

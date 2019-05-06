@@ -4,31 +4,136 @@
 # Convenience functions for cameratrap [ackage]
 # Note: <notes here>
 #
-# version 0.1
+# version 0.2
 # created fra 20160826
 # updated prea 20160829
 # updated prea 20161106
 # updated prea 20180119
 # updated prea 20190502 moved startup functions to zzz.R
+#                       getwd() and setwd() aren't used anymore
+#                       timezone identification now uses lutz::tz_lookup_coords()
 ###############################################################################
-
 
 #### tasks to be performed at package load must go in zzz.R
 
-#### create an empty dataframe for catalog data (column names as per Rovero and Zimmermann 2016)
+
+#### package reserved dot-functions ###########################################
+
+#### list all directories in a directory ######################################
+.getDirectoryContent <- function(path=getRepository()) {
+  dirs <- list.dirs(path, full.names=FALSE, recursive=FALSE)
+  # exclude directories whose name begins with "@"
+  dirs <- dirs[grep("^@", dirs, invert=TRUE)]
+  invisible(dirs)
+}
+
+#### create an empty dataframe for catalog data, assigns as global (column names as per Rovero and Zimmermann 2016)
 .createCatalog <- function() {
-  catalogData <- data.frame(Organization.Name=character(), Project.Name=character(), Sampling.Unit.Name=character(), Latitude=numeric(), Longitude=numeric(), Sampling.Event=character(), Photo.Type=character(), Photo.Date=character(), Photo.Time=character(), Raw.Names=character(), Raw.Path=character(), Genus=character(), Species=character(), Number.of.Animals=numeric(), Person.Identifying.the.Photo=character(), Camera.Serial.Number=numeric(), Camera.Start.Date.and.Time=character(), Camera.End.Date.and.Time=character(), Person.setting.up.the.Camera=character(), Person.picking.up.the.Camera=character(), Camera.Manufacturer=character(), Camera.Model=character(), Camera.Name=character(), Sequence.Info=numeric())
-  assign("catalogData", catalogData, envir=.pkgOptions)
+  catalogData <- data.frame(Organization.Name=character(),
+                            Project.Name=character(),
+                            Sampling.Unit.Name=character(),
+                            Latitude=numeric(),
+                            Longitude=numeric(),
+                            Sampling.Event=character(),
+                            Photo.Type=character(),
+                            Photo.Date=character(),
+                            Photo.Time=character(),
+                            Raw.Names=character(),
+                            Raw.Path=character(),
+                            Genus=character(),
+                            Species=character(),
+                            Number.of.Animals=numeric(),
+                            Person.Identifying.the.Photo=character(),
+                            Camera.Serial.Number=numeric(),
+                            Camera.Start.Date.and.Time=character(),
+                            Camera.End.Date.and.Time=character(),
+                            Person.setting.up.the.Camera=character(),
+                            Person.picking.up.the.Camera=character(),
+                            Camera.Manufacturer=character(),
+                            Camera.Model=character(),
+                            Camera.Name=character(),
+                            Sequence.Info=numeric())
+  #assign("catalogData", catalogData, envir=.pkgOptions)
 }
 
-#### return path to image/video filesystem repository
+
+#### parse a metadata file, yielding a named array #############################
+.parseMetadata <- function(path=getwd(), metadataFile='metadata.txt') {
+  metadataFilePath <- paste(path, metadataFile, sep='/')
+  stopifnot(file.exists(metadataFilePath))
+  # open silently, as connection
+  conn <- file(metadataFilePath, open='r')
+  lines <- readLines(conn, warn=FALSE) # final lines with no CRLF could raise warnings
+  close(conn)
+  # replace the first colon with a marker
+  lines <- sub(':', "^", lines)
+  lines <- strsplit(lines, "^", fixed=TRUE)
+  # parse and collapse
+  lines <- do.call('rbind', lapply(lines, function(x) data.frame(key=x[1], value=x[2])))
+  lines$key <- trimws(lines$key)
+  lines$value <- trimws(lines$value)
+  metadata <- as.list(as.character(lines$value))
+  names(metadata) <- tolower(lines$key) # dirty fix, in case someone mistyped keys...
+  # finish up parsing any element that needs a specific type
+  # as of August 2017 the "legal" tags are:
+  # *make:    | Maker of the camera trap         | Please use consistent naming and spelling
+  # *model:   | Model of the camera trap         | Please use consistent naming and spelling
+  # *serial:  | Serial number of the camera trap | Please transcribe the exact serial number
+  # *lat:     | Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326)
+  if(exists('lat', where=metadata)) { metadata$lat <- as.numeric(metadata$lat) }
+  # *lon:     | Camera position, longitude       | Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326)
+  if(exists('lon', where=metadata)) { metadata$lon <- as.numeric(metadata$lon) }
+  # timezone:| Time zone of camera position     | Use time Olson/IANA zone names as from R OlsonNames() function
+  if(exists('timezone', where=metadata)) { # check for a valid timezone
+    if(!any(OlsonNames()==metadata$timezone)) { # exists, but no match with Olson names
+      metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
+      #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
+      warning("Time zone ", metadata$timezone , " is not a valid time zone identifier in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\nSee ?OlsonNames() for valid time zone codes.")
+    }
+  } else { # timezone not present in metadata file, use lat/lon, if they exist, if not, no timezone info
+    if(exists('lat', where=metadata) & exists('lon', where=metadata)) {
+      metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
+      #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
+      warning("Time zone information not found in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n")
+    }
+  }
+  # *start:   | Camera start timestamp           | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
+  if(exists('start', where=metadata)) {
+    tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
+    metadata$start <- as.POSIXct(metadata$start, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
+  }
+  # *end:     | Camera end timestamp             | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
+  if(exists('end', where=metadata)) {
+    tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
+    metadata$end <- as.POSIXct(metadata$end, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
+  }
+  # height:  | Camera ground height             | Height from ground at which the camera treap has been placed
+  if(exists('height', where=metadata)) { metadata$height <- as.numeric(metadata$height) }
+  # aspect:  | Camera lens aspect               | Aspect (in degrees, 0 to 360) at which the camera lens was facing
+  if(exists('aspect', where=metadata)) { metadata$aspect <- as.numeric(metadata$aspect) }
+  # placed:  | Who placed the camera            | First name, last name
+  # removed: | Who removed the camera           | First name, last name
+  # return data
+  invisible(metadata)
+}
+
+
+#### public functions #########################################################
+
+#### return path to image/video filesystem repository #########################
+#' @export
 getRepository <- function() {
-  get("repositoryPath", envir=.pkgOptions)
+  rep <- get("repositoryPath", envir=.pkgOptions)
+  if(is.null(rep)) {
+    stop("Repository not defined. Please use setRepository()\n")
+  } else {
+    return(rep)
+  }
 }
 
-#### set path to image/video filesystem repository
+#### set path to image/video filesystem repository ############################
+#' @export
 setRepository <- function(path=getwd(), create=FALSE) {
-  #@TODO add code to check for repository existance
   path <- normalizePath(path, mustWork=FALSE)
   pathExists <- dir.exists(path)
   if(pathExists==FALSE) {
@@ -48,53 +153,53 @@ setRepository <- function(path=getwd(), create=FALSE) {
   }
 }
 
-#### pull out EXIF data for all AVI and JPEG files inside a directory
-getEXIFData <- function(EXIFDir=getwd()) {
-  oldwd <- getwd()
-  setwd(EXIFDir)
+
+#### pull out EXIF data for all AVI and JPEG files inside a directory #########
+#' @export
+getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0) {
+  # Some notes on time and time zone information:
+  # as it seems, exiftool extracts timestamps assuming they are in the timezone of the machine where exiftool itself is running.
+  # This can be undesirable, as sometimes we need the timestamps in the timezone the camera trap operated in, which may be different from the timezone we're working.
+  # If a time zone name (i.e. a valid Olson time zone designator) or a time zone offset has been supplied, time zone information will be corrected accordingly.
+  # check for time zone
+  if(tz %in% OlsonNames() == FALSE) stop("Time zone name \"", tz, "\" is not compliant to Olson/IANA format.\n  Please see ?OlsonNames.")
   tmpCsvFile <- tempfile(pattern=paste("EXIF", gsub('/', '-', EXIFDir), sep=''), fileext=".csv")
   # fix csv file names containing spaces
   tmpCsvFile <- gsub(' ', '_', tmpCsvFile)
   # ask exiftool to pull out just the tags we need, some files can hide _binary_ tags that are difflcult to process...
-  res <- system2(EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 -extension AVI -ext JPG -ext avi -ext jpg -ext M4V -csv ',  ' * > ', tmpCsvFile, sep=''))
-  if(res==0){
-    EXIFData <- read.csv(tmpCsvFile)
+  #@FIXME EXIFTOOL MUST BE PASSED the directory...
+  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 -extension AVI -ext JPG -ext avi -ext jpg -ext M4V -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''))
+  if(res==0){ # EXIFTOOL exited nicely, we have a csv to parse
+    EXIFData <- utils::read.csv(tmpCsvFile, stringsAsFactors=FALSE)
     unlink(tmpCsvFile)
-    # the following row is not needed anymore, since we ask exiftool what we actually need instead of asking 'just all' and cleaning up after
-    # EXIFData <- EXIFData[c(3,6,10)] # get just the data we actually need
     names(EXIFData) <- c('Raw.Names','Photo.Time','Photo.Type')
-    #@TODO check for date and time format to be compliant to Rovero and Zimmermann
+    # process Photo.Time to be compliant with Rovero and Zimmermann
+    # the standard EXIF timestamp format is "YYYY:mm:dd HH:MM:SS", plus, if any, timezone info as "+HH:MM" or "-HH:MM" or "Z"
     EXIFData$Photo.Time <- as.character(EXIFData$Photo.Time)
-    EXIFData$Photo.Date <- substr(EXIFData$Photo.Time, 1, 10) ## fixed as requested by Rovero and Zimmermann
-    EXIFData$Photo.Date <- gsub(':','-',EXIFData$Photo.Date) ## fixed as requested by Rovero and Zimmermann
-    EXIFData$Photo.Time <- substr(EXIFData$Photo.Time, 12, 19) ## fixed as requested by Rovero and Zimmermann
-    EXIFData$Sampling.Event <- EXIFDir
-  } else {
+    # separate timestamp from EXIF time zone
+    EXIFData$XXtime <- substr(EXIFData$Photo.Time, 1, 19)
+    # convert into POSIX datetime, use timezone info if available, if not, use Sys.timezone
+    EXIFData$XXtime <- as.POSIXct(EXIFData$XXtime, format="%Y:%m:%d %H:%M:%S") # in Sys.timezone (which could be wrong)
+    # add an offset (in seconds) if needed
+    EXIFData$XXtime <- EXIFData$XXtime + offset # e.g. 19800 if is 5.30h
+    # correct for timezone
+    if(tz!=Sys.timezone()) { # a timezone has been specified, correct timestamps to that timezone
+      EXIFData$XXtime <- format(EXIFData$XXtime, tz=tz, usetz=TRUE)
+    } else { # keep Sys.timezone @TODO perhaps this else clause is unnecessary...
+      EXIFData$XXtime <- format(EXIFData$XXtime)
+    }
+    # format as per Rovero and Zimmermann
+    EXIFData$Photo.Date <- substr(EXIFData$Photo.Time, 1, 10)
+    EXIFData$Photo.Date <- gsub(':', '-', EXIFData$Photo.Date)
+    EXIFData$Photo.Time <- substr(EXIFData$Photo.Time, 12, 19)
+    EXIFData$XXtime <- NULL
+    EXIFData$Timezone <- tz
+    EXIFData$Sampling.Event <- basename(EXIFDir) # use basename assuming EXIFDir is a full path
+    #EXIFData$Photo.Type <- as.character(EXIFData$Photo.Type)
+  } else { # EXIFTOOL call returned an error, create an empty dataframe
     EXIFData <- data.frame(Raw.Names=character(), Photo.Time=character(),Photo.Type=character(), Sampling.Event=character())
   }
-  setwd(oldwd)
   invisible(EXIFData)
 }
 
-#### parse a medata file, returns a named array
-.parseMetadata <- function(file) {
-  stopifnot(file.exists(file))
-  #@FIXME handle 'lines with embedded nulls', i.e. skip in some way any blank line
-  # using read.table, but gives warning for non properly terminated files
-  md.frame <- suppressWarnings(read.table(file=file, header=FALSE, sep=':', col.names=c('Key', 'Value'), stringsAsFactors=FALSE))
-  #md.frame[6,]$Value <- paste(md.frame[6,]$Value,md.frame[7,]$Key,md.frame[7,]$Value, sep=':')
-  #md.frame[8,]$Value <- paste(md.frame[8,]$Value,md.frame[9,]$Key,md.frame[9,]$Value, sep=':')
-  #md.frame <- md.frame[-c(7,9),]
-  #substr(md.frame[6,]$Value, 12,12) <- ' '
-  #substr(md.frame[6,]$Value, 21,21) <- ' '
-  #substr(md.frame[7,]$Value, 12,12) <- ' '
-  #substr(md.frame[7,]$Value, 21,21) <- ' '
-
-  md.frame$Key <- trimws(md.frame$Key)
-  md.frame$Value <- trimws(md.frame$Value)
-  md.table <- md.frame$Value
-  names(md.table) <- md.frame$Key
-  #@TODO do any specialized parsing/conditioning based on keys here
-  #invisible(md.table)
-  return(md.table)
-}
+#### End of File ####

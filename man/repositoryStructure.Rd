@@ -12,7 +12,7 @@ Files and directories organization in a \code{cameratraps} repository.
 \details{
 In the \code{cameratraps} package, camera trap data (i.e. images and videos) are stored "raw" on a file system: no database is involved and physical storage is kept as simple as possible: for example, a shared directory on a slow but terabyte-spacious Network Attached Storage could be conveniently used.
 
-Taht is to say, some where exists a "\emph{data warehouse}", i.e. a physical host (a NAS, for instance, serving a shared directory of some sort), where all the camera trap material is stored.
+That is to say, some where exists a "\emph{data warehouse}", i.e. a physical host (a NAS, for instance, serving a shared directory of some sort), where all the camera trap material is stored.
 
 \section{\bold{Project directory}}
 
@@ -23,6 +23,8 @@ Inside the main data warehouse root directory, it can also exist a \code{scripts
 A project subdirectory can contain a "\emph{catalog file}": actually, if \code{cameratraps} is in use, a catalog file should exist there, automatically made by the \link{updateCatalog} function. The catalog file can be opened and edited by hand, but every time the \link{updateCatalog} function is run, any information preesnt in the catalog will be updated, if something in the files and directories structure has changed. The only exception is for the columns named \code{Genus} and \code{Species}, that are intended as user-editable columns: in this case, if \link{update|Catalog} finds some non-\code{NULL} value, it will preserve the entire record (i.e. row).
 
 Here and there in the directories constituting the project directory, a "metedata file" can be present. See \link{metadataFileFormat} for further details.
+
+Any file or directory whose name begins with \code{@} will be ignored. This in part is a legacy from old Synology NAS, but can come handy.
 
 \section{Site directory}
 
@@ -52,7 +54,7 @@ A memory card subdirectory must be named as follows:\cr
   \code{<YYYY>-<MM>-<DD>}\cr
 where \code{<YYYY>-<MM>-<DD>} is the date (year as four-digit number, month as two-digit and day as two-digit) when the memory card has been removed from the camera trap.
 
-A memory card directory must contain files "as they were" on the original memory card, when removed fomr the operating camera trap. Any modifications made to the files \bold{must} be made in a subdirectory of the memory card directory named \code{data} (such a name will be ignored by  \link{updateCatalog}), so that original pictures and/or videos will not be mixed with derived products. Files copied from a memory card \bold{must not} be renamed or modified in any way.
+A memory card directory must contain files "as they were" on the original memory card, when removed fomr the operating camera trap. Any modifications made to the files \bold{must} be made in a subdirectory of the memory card directory named \code{@data} (such a name will be ignored by \link{updateCatalog}), so that original pictures and/or videos will not be mixed with derived products. Files copied from a memory card \bold{must not} be renamed or modified in any way.
 
 \section{Example structure}
 
@@ -77,8 +79,11 @@ The following fine example of ASCII art demonstrate the rather boring structure 
   |   |       + IMG0002.JPG
   |   |       + IMG0003.JPG
   |   |       + ...
+  |   +- @Ignore_me
+  |   |
   |   +- PRJ-S002
   |       +- PRJ-S002-C001
+  |       |   + @Skipme
   |       |   + metadata.txt
   |       |   + IMG0001.JPG
   |       |   + IMG0002.JPG

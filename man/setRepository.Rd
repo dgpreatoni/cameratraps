@@ -1,4 +1,5 @@
 \name{setRepository}
+\alias{getRepository}
 \alias{setRepository}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \alias{getRepository} %- this manpage also goes for the 'get'
@@ -15,7 +16,7 @@ getRepository()
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{path}{
-a valid path where the files and direstories structure of a cameratraps repository is located. See \link{repositorystructure} for a detailed description of a repository structure.
+a valid path where the files and direstories structure of a cameratraps repository is located. See \link{repositoryStructure} for a detailed description of a repository structure.
 }
   \item{create}{
 a logical value. If \code{TRUE}, R will try creating the directory in \code{path}.
