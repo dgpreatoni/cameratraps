@@ -119,6 +119,8 @@ updateCatalog <- function(verbose=FALSE) {
   for(i in 1:length(diffCols)) {
     catalogData[diffCols[i]] <- NA
   }
+  # make sure field types are all OK
+  catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=catalogData$Timezone)
   invisible(catalogData)
 }
 

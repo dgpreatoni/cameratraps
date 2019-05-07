@@ -39,6 +39,7 @@
                             Photo.Date=character(),
                             Photo.Time=character(),
                             Timezone=character(),
+                            Photo.Timestamp=character(),
                             Raw.Names=character(),
                             Raw.Path=character(),
                             Genus=character(),
