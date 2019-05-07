@@ -52,36 +52,36 @@ listDataDir <- function(siteDirName, cameraDirName) {
 }
 
 
-#### traverse all the directories in a repository
+#### traverse all the directories in a repository #############################
 #' @export
 updateCatalog <- function(verbose=FALSE) {
   theRepo <- getRepository()
-  if(verbose) cat('Repo is ', theRepo, '\n')
+  if(verbose) cat('Repository is ', theRepo, '\n')
   siteNames <- listSiteDir()
   if(verbose) cat("Sites: ", siteNames, "\n")
   catalogData <- list()
   for(site in siteNames) { # process a site directory
     sitePath <- paste(theRepo, site, sep='/')
-    if(verbose) cat("\tprocessing site ", site, "\n")
+    if(verbose) cat("  processing site ", site, "\n")
     # process, if any, medatata.txt here
     if(file.exists(paste(sitePath, 'metadata.txt', sep='/'))) {
       .pkgOptions$metadata[[site]] <- .parseMetadata(path=sitePath)
     } else {
-      warning("\tno medatata found for site ", site, "\n")
+      warning("  no medatata found for site ", site, "\n")
     }
     cameraNames <- listCameraDir(site)
     .pkgOptions$metadata[[site]]$cameras <- list()
     siteData <- list()
     for(camera in cameraNames) { # process a camera directory
       cameraPath <- paste(sitePath, camera, sep='/')
-      if(verbose) cat("\t\tprocessing camera ", camera, "\n")
+      if(verbose) cat("    processing camera ", camera, "\n")
       # process metadata (must be there!)
       .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
       sdcardDirs <- listDataDir(site, camera)
       cameraData <- list()
       for(sdcard in sdcardDirs) { # process data dump directories
         dataPath <- paste(cameraPath, sdcard, sep='/')
-        if(verbose) cat("\t\t\tprocessing sdcard ", sdcard, "\n")
+        if(verbose) cat("      processing sdcard ", sdcard, "\n")
         sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
         if(nrow(sdcData) > 0) {
           cameraData[[sdcard]] <- sdcData
@@ -110,5 +110,24 @@ updateCatalog <- function(verbose=FALSE) {
   # flatten catalog data
   catalogData <- do.call('rbind', catalogData)
   row.names(catalogData) <- NULL
+  # shape up to a standard catalog
+  emptyCatalog <- .createCatalog()
+  # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
+  # get columns in catalogData, but not in siteData
+  diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
+  # add blank columns to siteData
+  for(i in 1:length(diffCols)) {
+    catalogData[diffCols[i]] <- NA
+  }
   invisible(catalogData)
+}
+
+
+#### parallel traverse all the directories in a repository ####################
+updateCatalog2 <- function(verbose=FALSE) {
+  theRepo <- getRepository()
+  # just list directories
+  theDirs <- list.dirs(path=theRepo, full.names=FALSE, recursive=TRUE)
+  # remove @-names
+  theDirs <-theDirs[grep("^@", theDirs, invert=TRUE)]
 }

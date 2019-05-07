@@ -11,7 +11,9 @@ Inside any camera trap directory, and optionally inside a site directory, a "met
 
 A metadata file is a \emph{text file} and must be named \code{metadata.txt} (all lowercase).
 
-Inside the metadata file, one can use the tag/value pairs described below.
+Inside a metadata file, one can use the tag/value pairs described below.
+
+Inside a metadata file, anything following the hash character (\code{#}) will be treated as a comment, i.e. ignored.
 
 A tag is made by a reserved word (see below), followed by a colon, (optionally) a space, and any possible values, as described below.
 
@@ -22,39 +24,40 @@ If need be, further tags can be defined.
 
 \tabular{rcll}{
 \bold{Tag} \tab \bold{Context} \tab \bold{Description} \tab \bold{Values} \cr
-\code{*make:}     \tab [C]   \tab Make of the camera trap          \tab Please use consistent naming and spelling \cr
-*model:    \tab [C]   \tab Model of the camera trap         \tab Please use consistent naming and spelling \cr
-*serial:   \tab [C]   \tab Serial number of the camera trap \tab Please transcribe the exact serial number \cr
-*lat:      \tab [C]   \tab Camera position, latitude        \tab Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326) \cr
-*lon:      \tab [C]   \tab Camera position, longitude       \tab Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326) \cr
- timezone: \tab [C]   \tab Time zone of camera position     \tab Use time Olson/IANA zone name [1] as from R OlsonNames() function \cr
-*start:    \tab [C]   \tab Camera start timestamp           \tab Use date and time expressed in ISO 8601 format [2] \cr
-*end:      \tab [C]   \tab Camera end timestamp             \tab Use date and time expressed in ISO 8601 format [2] \cr
- height:   \tab [C]   \tab Camera ground height             \tab Height from ground at which the camera treap has been placed \cr
- aspect:   \tab [C]   \tab Camera lens aspect               \tab Aspect (in degrees, 0 to 360) at which the camera lens was facing \cr
- placed:   \tab [C]   \tab Who placed the camera            \tab First name, last name \cr
- removed:  \tab [C]   \tab Who removed the camera           \tab First name, last name \cr
- name:     \tab [CS]  \tab Site or Camera name              \tab Please use consistent naming and spelling \cr
+*\code{make}:     \tab [C]   \tab Make of the camera trap   \tab Please use consistent naming and spelling \cr
+*\code{model}:    \tab [C]   \tab Model of the camera trap         \tab Please use consistent naming and spelling \cr
+*\code{serial}:   \tab [C]   \tab Serial number of the camera trap \tab Please transcribe the exact serial number \cr
+*\code{lat}:      \tab [C]   \tab Camera position, latitude        \tab Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326) \cr
+*\code{lon}:      \tab [C]   \tab Camera position, longitude       \tab Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326) \cr
+ \code{timezone}: \tab [C]   \tab Time zone of camera position     \tab Use time Olson/IANA zone name [1] as from R OlsonNames() function \cr
+*\code{start}:    \tab [C]   \tab Camera start timestamp           \tab Use date and time expressed in ISO 8601 format [2] \cr
+*\code{end}:      \tab [C]   \tab Camera end timestamp             \tab Use date and time expressed in ISO 8601 format [2] \cr
+ \code{height}:   \tab [C]   \tab Camera ground height             \tab Height from ground at which the camera treap has been placed \cr
+ \code{aspect}:   \tab [C]   \tab Camera lens aspect               \tab Aspect (in degrees, 0 to 360) at which the camera lens was facing \cr
+ \code{placed}:   \tab [C]   \tab Who placed the camera            \tab First name, last name \cr
+ \code{removed}:  \tab [C]   \tab Who removed the camera           \tab First name, last name \cr
+ \code{name}:     \tab [CS]  \tab Site or Camera name              \tab Please use consistent naming and spelling \cr
 }
  *: the tag is mandatory.
 
- S: tag is recognized for “sites”, ignored otherwise.
+ \code{S}: tag is recognized for “sites”, ignored otherwise.
 
- C: tag is recognized for “cameras”, ignored otherwise.
+ \code{C}: tag is recognized for “cameras”, ignored otherwise.
 
-[1] Olson/IANA time zones and time zone names can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+[1] Olson/IANA time zones and time zone names can be found at \url{https://en.wikipedia.org/wiki/List_of_tz_database_time_zones}
 
 [2] Dates and time must be expressed according to the ISO 8601 standard (UNI EN 28601, 1993), as follows:
-  yyyy-MM-ddTHH:mm:ssK
+  \code{yyyy-MM-ddTHH:mm:ssK}\cr
 where:
-  yyyy year as four-digits number
-    MM month as two-digits number
-    dd day of month as two-digits number
-    HH hour, 24-hour format, as two-digits number
-    mm minutes as two-digits number
-    ss seconds (or '00' if exact seconds unknown) as two-digits number
-     K time zone offset, expressed as =hh:mm where "=" is either "+" or "-", "hh" is the hour offset and "mm" is tne minutes offset (usually '00'). Use the 'Z' (Zulu time) designator if and only if timestamps are _actually_ in Zulu (UTC) time. IF no offset is specified, the timezone key will be used, if the timezone key is not present, a lookup on GeoNames web services will be attempted to identify the timezone from latitude and longitude.
-
+\tabular{ll}{
+\code{yyyy} \tab year as four-digits number.\cr
+\code{MM} \tab month as two-digits number.\cr
+\code{dd} \tab day of month as two-digits number.\cr
+\code{HH} \tab hour, 24-hour format, as two-digits number.\cr
+\code{mm} \tab minutes as two-digits number.\cr
+\code{ss} \tab seconds (or '\code{00}' if exact seconds unknown) as two-digits number.\cr
+\code{K} \tab time zone offset, expressed as \code{=hh:mm} where "\code{=}" is either "\code{+}" or "\code{-}", "\code{hh}" is the hour offset and "\code{mm}" is the minutes offset (usually '\code{00}'). Use the '\code{Z}' (Zulu time) designator if and only if timestamps are \emph{actually} in Zulu (UTC) time. If no offset is specified, the \code{timezone} key will be used, if the \code{timezone} key is not present, a lookup on web services will be attempted to identify the timezone from latitude and longitude.\cr
+}
 }
 \details{
 %%  ~~ If necessary, more details than the __description__ above ~~

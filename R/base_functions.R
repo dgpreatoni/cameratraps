@@ -38,6 +38,7 @@
                             Photo.Type=character(),
                             Photo.Date=character(),
                             Photo.Time=character(),
+                            Timezone=character(),
                             Raw.Names=character(),
                             Raw.Path=character(),
                             Genus=character(),
@@ -65,6 +66,8 @@
   conn <- file(metadataFilePath, open='r')
   lines <- readLines(conn, warn=FALSE) # final lines with no CRLF could raise warnings
   close(conn)
+  #clean up comments: a comment is anything between a pond # and a <cr>
+  lines <- gsub('#.*', '', lines)
   # replace the first colon with a marker
   lines <- sub(':', "^", lines)
   lines <- strsplit(lines, "^", fixed=TRUE)
@@ -133,6 +136,7 @@ getRepository <- function() {
 
 #### set path to image/video filesystem repository ############################
 #' @export
+#' @section TODO add existing catalog ingestion
 setRepository <- function(path=getwd(), create=FALSE) {
   path <- normalizePath(path, mustWork=FALSE)
   pathExists <- dir.exists(path)
@@ -147,6 +151,7 @@ setRepository <- function(path=getwd(), create=FALSE) {
   }
   # assume path exists
   if(pathExists) {
+    #@TODO if path exists, check for an existing catalog
     cat("Repository set to:", path, "\n")
     assign("repositoryPath", normalizePath(path), envir=.pkgOptions)
     invisible(path)
@@ -157,6 +162,8 @@ setRepository <- function(path=getwd(), create=FALSE) {
 #### pull out EXIF data for all AVI and JPEG files inside a directory #########
 #' @export
 getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0) {
+  # for maintenance purpose: place here all known file extensions
+  know_extensions <- c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4')
   # Some notes on time and time zone information:
   # as it seems, exiftool extracts timestamps assuming they are in the timezone of the machine where exiftool itself is running.
   # This can be undesirable, as sometimes we need the timestamps in the timezone the camera trap operated in, which may be different from the timezone we're working.
@@ -168,7 +175,7 @@ getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0) {
   tmpCsvFile <- gsub(' ', '_', tmpCsvFile)
   # ask exiftool to pull out just the tags we need, some files can hide _binary_ tags that are difflcult to process...
   #@FIXME EXIFTOOL MUST BE PASSED the directory...
-  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 -extension AVI -ext JPG -ext avi -ext jpg -ext M4V -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''))
+  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 ', paste('-ext', know_extensions, collapse=' '), ' -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''))
   if(res==0){ # EXIFTOOL exited nicely, we have a csv to parse
     EXIFData <- utils::read.csv(tmpCsvFile, stringsAsFactors=FALSE)
     unlink(tmpCsvFile)
