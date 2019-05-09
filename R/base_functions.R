@@ -54,6 +54,7 @@
                             Camera.Manufacturer=character(),
                             Camera.Model=character(),
                             Camera.Name=character(),
+                            Site.Name=character(),
                             Sequence.Info=numeric())
   #assign("catalogData", catalogData, envir=.pkgOptions)
 }
@@ -81,65 +82,73 @@
 
 #### parse a metadata file, yielding a named array #############################
 #' @export
-.parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName) {
+.parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName, check=TRUE) {
   metadataFilePath <- paste(path, metadataFile, sep='/')
-  if(file.exists(metadataFilePath)==FALSE) {stop("File ", .pkgOptions$metadataFileName, " not found in ", path, ". Aborting.\n")}
-  # open silently, as connection
-  conn <- file(metadataFilePath, open='r')
-  lines <- readLines(conn, warn=FALSE) # final lines with no CRLF could raise warnings
-  close(conn)
-  #clean up comments: a comment is anything between a pond # and a <cr>
-  lines <- gsub('#.*', '', lines)
-  # replace the first colon with a marker
-  lines <- sub(':', "^", lines)
-  lines <- strsplit(lines, "^", fixed=TRUE)
-  # parse and collapse
-  lines <- do.call('rbind', lapply(lines, function(x) data.frame(key=x[1], value=x[2])))
-  lines$key <- trimws(lines$key)
-  lines$value <- trimws(lines$value)
-  metadata <- as.list(as.character(lines$value))
-  names(metadata) <- tolower(lines$key) # dirty fix, in case someone mistyped keys...
-  # finish up parsing any element that needs a specific type
-  # as of August 2017 the "legal" tags are:
-  # *make:    | Maker of the camera trap         | Please use consistent naming and spelling
-  # *model:   | Model of the camera trap         | Please use consistent naming and spelling
-  # *serial:  | Serial number of the camera trap | Please transcribe the exact serial number
-  # *lat:     | Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326)
-  if(exists('lat', where=metadata)) { metadata$lat <- as.numeric(metadata$lat) }
-  # *lon:     | Camera position, longitude       | Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326)
-  if(exists('lon', where=metadata)) { metadata$lon <- as.numeric(metadata$lon) }
-  # timezone:| Time zone of camera position     | Use time Olson/IANA zone names as from R OlsonNames() function
-  if(exists('timezone', where=metadata)) { # check for a valid timezone
-    if(!any(OlsonNames()==metadata$timezone)) { # exists, but no match with Olson names
-      metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
-      #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
-      warning("Time zone ", metadata$timezone , " is not a valid time zone identifier in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\nSee ?OlsonNames() for valid time zone codes.")
+  if(file.exists(metadataFilePath)==TRUE) { # process file
+    # open silently, as connection
+    conn <- file(metadataFilePath, open='r')
+    lines <- readLines(conn, warn=FALSE) # final lines with no CRLF could raise warnings
+    close(conn)
+    # clean up comments: a comment is anything between a pond # and a <cr>
+    lines <- gsub('#.*', '', lines)
+    lines <- lines[lines!=""]
+    # replace the first colon with a marker
+    lines <- sub(':', "^", lines)
+    lines <- strsplit(lines, "^", fixed=TRUE)
+    # parse and collapse
+    lines <- do.call('rbind', lapply(lines, function(x) data.frame(key=x[1], value=x[2])))
+    lines$key <- trimws(lines$key)
+    lines$value <- trimws(lines$value)
+    metadata <- as.list(as.character(lines$value))
+    names(metadata) <- tolower(lines$key) # dirty fix, in case someone mistyped keys...
+    # finish up parsing any element that needs a specific type
+    # as of August 2017 the "legal" tags are:
+    # *make:    | Maker of the camera trap         | Please use consistent naming and spelling
+    # *model:   | Model of the camera trap         | Please use consistent naming and spelling
+    # *serial:  | Serial number of the camera trap | Please transcribe the exact serial number
+    # *lat:     | Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326)
+    if(exists('lat', where=metadata)) { metadata$lat <- as.numeric(metadata$lat) }
+    # *lon:     | Camera position, longitude       | Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326)
+    if(exists('lon', where=metadata)) { metadata$lon <- as.numeric(metadata$lon) }
+    # timezone:| Time zone of camera position     | Use time Olson/IANA zone names as from R OlsonNames() function
+    if(exists('timezone', where=metadata)) { # check for a valid timezone
+      if(!any(OlsonNames()==metadata$timezone)) { # exists, but no match with Olson names
+        metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
+        #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
+        warning("Time zone ", metadata$timezone , " is not a valid time zone identifier in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\nSee ?OlsonNames() for valid time zone codes.")
+      }
+    } else { # timezone not present in metadata file, use lat/lon, if they exist, if not, no timezone info
+      if(exists('lat', where=metadata) & exists('lon', where=metadata)) {
+        metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
+        #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
+        warning("Time zone information not found in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n")
+      }
     }
-  } else { # timezone not present in metadata file, use lat/lon, if they exist, if not, no timezone info
-    if(exists('lat', where=metadata) & exists('lon', where=metadata)) {
-      metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
-      #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
-      warning("Time zone information not found in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n")
+    # *start:   | Camera start timestamp           | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
+    if(exists('start', where=metadata)) {
+      tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
+      metadata$start <- as.POSIXct(metadata$start, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
+    }
+    # *end:     | Camera end timestamp             | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
+    if(exists('end', where=metadata)) {
+      tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
+      metadata$end <- as.POSIXct(metadata$end, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
+    }
+    # height:  | Camera ground height             | Height from ground at which the camera treap has been placed
+    if(exists('height', where=metadata)) { metadata$height <- as.numeric(metadata$height) }
+    # aspect:  | Camera lens aspect               | Aspect (in degrees, 0 to 360) at which the camera lens was facing
+    if(exists('aspect', where=metadata)) { metadata$aspect <- as.numeric(metadata$aspect) }
+    # placed:  | Who placed the camera            | First name, last name
+    # removed: | Who removed the camera           | First name, last name
+    # return data
+    invisible(metadata)
+  } else { # metadata file not found
+    if(check==TRUE) { # complain if etadata file does not exist, this is standard behaviour
+      stop("File ", .pkgOptions$metadataFileName, " not found in ", path, ". Aborting.\n")
+    } else { # skip checks, be silent
+      invisible(NULL)
     }
   }
-  # *start:   | Camera start timestamp           | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
-  if(exists('start', where=metadata)) {
-    tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
-    metadata$start <- as.POSIXct(metadata$start, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
-  }
-  # *end:     | Camera end timestamp             | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
-  if(exists('end', where=metadata)) {
-    tzInfo <- ifelse(exists('timezone', where=metadata), metadata$timezone, Sys.timezone())  # use timezone, if doesn't exist default to local timezone
-    metadata$end <- as.POSIXct(metadata$end, tz=tzInfo, format="%Y-%m-%dT%H:%M:%S", usetz=TRUE)
-  }
-  # height:  | Camera ground height             | Height from ground at which the camera treap has been placed
-  if(exists('height', where=metadata)) { metadata$height <- as.numeric(metadata$height) }
-  # aspect:  | Camera lens aspect               | Aspect (in degrees, 0 to 360) at which the camera lens was facing
-  if(exists('aspect', where=metadata)) { metadata$aspect <- as.numeric(metadata$aspect) }
-  # placed:  | Who placed the camera            | First name, last name
-  # removed: | Who removed the camera           | First name, last name
-  # return data
-  invisible(metadata)
 }
 
 

@@ -9,4 +9,4 @@ setRepository(theRepo)
 ## Not Run:
 # getRepository()
 
-ctl <- updateCatalog(verbose=TRUE)
+ctl <- updateCatalog2(verbose=TRUE)

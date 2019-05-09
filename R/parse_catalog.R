@@ -101,6 +101,8 @@ updateCatalog <- function(verbose=FALSE) {
       cameraData$Latitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lat']])
       cameraData$Longitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lon']])
       cameraData$Sampling.Unit.Name <- camera
+      cameraData$Camera.Name <- .pkgOptions$metadata[[site]][[camera]][['name']]
+      cameraData$Site.Name <- .pkgOptions$metadata[[site]][['name']]
       # stash
       siteData[[camera]] <- cameraData
     } # cameraDirs loop
@@ -138,6 +140,7 @@ updateCatalog <- function(verbose=FALSE) {
 
 
 #### parallel traverse all the directories in a repository ####################
+#' @export
 updateCatalog2 <- function(verbose=FALSE) {
   theRepo <- getRepository()
   # just list directories
@@ -154,48 +157,57 @@ updateCatalog2 <- function(verbose=FALSE) {
   # size up jobs
   theCards <- theDirs[theDirs$level=='sdcard',]
   # go parallel 1: get EXIF data from sdcard directories
-  EXIFData <- parallel::mclapply(paste(theRepo, theCards$path, sep='/'), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
-  EXIFData <- do.call('rbind', EXIFData)
+  catalogData <- parallel::mclapply(paste(theRepo, theCards$path, sep='/'), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
+  catalogData <- do.call('rbind', catalogData)
   # shape up to a standard catalog
   emptyCatalog <- .createCatalog()
   # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
   # get columns in catalogData, but not in siteData
-  diffCols <- setdiff(names(emptyCatalog), names(EXIFData)) # order is mandatory
+  diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
   # add blank columns to siteData
   for(i in 1:length(diffCols)) {
-    EXIFData[diffCols[i]] <- NA
+    catalogData[diffCols[i]] <- NA
   }
   # fix some fields content, LATER: add camera metadata
-  EXIFData$Raw.Path <- dirname(EXIFData$Raw.Names)
-  EXIFData$Raw.Names <- basename(as.character(EXIFData$Raw.Names))
+  catalogData$Raw.Path <- dirname(catalogData$Raw.Names)
+  catalogData$Raw.Names <- basename(as.character(catalogData$Raw.Names))
   # pull out camera directory name
-  camNames <- do.call('rbind',strsplit(EXIFData[,'Raw.Path'], '/'))
-  EXIFData$Sampling.Unit.Name <- camNames[,ncol(camNames)-1]
+  camNames <- do.call('rbind',strsplit(catalogData[,'Raw.Path'], '/'))
+  catalogData$Sampling.Unit.Name <- camNames[,ncol(camNames)-1]
   rm(camNames)
   # get and attach camera metadata
   theCameras <- theDirs[theDirs$level=='camera',]
   # go parallel 2: get metadata from camera directories
   cameraData <- parallel::mclapply(paste(theRepo, theCameras$path, sep='/'), function(x) .parseMetadata(x))
   names(cameraData) <- basename(theCameras$path)
-  EXIFData <- split(EXIFData, EXIFData$Sampling.Unit.Name)
+  catalogData <- split(catalogData, catalogData$Sampling.Unit.Name)
   for(cam in names(cameraData)) { # attach camera metadata
-    if(nrow(EXIFData[[cam]]) > 0) {
-      EXIFData[[cam]]$Camera.Serial.Number <- cameraData[[cam]]$serial
-      EXIFData[[cam]]$Camera.Start.Date.and.Time <- cameraData[[cam]]$start
-      EXIFData[[cam]]$Camera.End.Date.and.Time <- cameraData[[cam]]$end
-      EXIFData[[cam]]$Camera.Manufacturer <- cameraData[[cam]]$make
-      EXIFData[[cam]]$Camera.Model <- cameraData[[cam]]$model
-      EXIFData[[cam]]$Latitude <- as.numeric(cameraData[[cam]]$lat)
-      EXIFData[[cam]]$Longitude <- as.numeric(cameraData[[cam]]$lon)
+    if(nrow(catalogData[[cam]]) > 0) {
+      catalogData[[cam]]$Camera.Serial.Number <- cameraData[[cam]]$serial
+      catalogData[[cam]]$Camera.Start.Date.and.Time <- cameraData[[cam]]$start
+      catalogData[[cam]]$Camera.End.Date.and.Time <- cameraData[[cam]]$end
+      catalogData[[cam]]$Camera.Manufacturer <- cameraData[[cam]]$make
+      catalogData[[cam]]$Camera.Model <- cameraData[[cam]]$model
+      catalogData[[cam]]$Latitude <- as.numeric(cameraData[[cam]]$lat)
+      catalogData[[cam]]$Longitude <- as.numeric(cameraData[[cam]]$lon)
+      catalogData[[cam]]$Sampling.Unit.Name <- cam
+      catalogData[[cam]]$Camera.Name <-cameraData[[cam]]$name
     }
   }
   #'@note correct here for timezone?
-  EXIFData <- do.call('rbind', EXIFData)
+  catalogData <- do.call('rbind', catalogData)
   #'@note get and attach site metadata
-
-
-
-    # make sure field types are all OK
+  theSites <- theDirs[theDirs$level=='site',]
+  # go parallel 3: get metadata from site directories (if any)
+  siteData <- parallel::mclapply(paste(theRepo, theSites$path, sep='/'), function(x) .parseMetadata(x, check=FALSE))
+  names(siteData) <- basename(theSites$path)
+  #'@todo site data are read but not used, actually we use  'name'...
+  catalogData <- split(catalogData, substr(catalogData$Sampling.Unit.Name, 1, 8))
+  for(site in names(siteData)) { # attach, if any, site metadata
+    catalogData[[site]]$Site.Name <- siteData[[site]]$name
+  }
+  catalogData <- do.call('rbind', catalogData)
+  # make sure field types are all OK
   # note that passing a 'tz' to as.POSIX* means that tz is a scalar (ugly but true): https://stackoverflow.com/questions/32084042/converting-to-local-time-in-r-vector-of-timezones
   if(length(unique(catalogData$Timezone))>1) { # we have more than a single timezone, split up, set, reassemble
     tmpCatalogByTz <- split(catalogData, catalogData$Timezone)
