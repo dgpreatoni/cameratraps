@@ -59,10 +59,31 @@
 }
 
 
+#### check whether a catalog file is present ##################################
+#.catalogExists <- function() {
+#  return(file.exists())
+#}
+
+## check if a catalog spreadsheet already exists: if yes, the existing catalog could contain user-entered information that must not be overwritten, such as species identification and repeated rows caused by multiple species in the same photo: all this has to be preserved
+#if(file.exists(paste(catalogFileName, 'xls', sep='.'))) { # re-align old catalog to new one, the csv version is not checked for existence
+#  oldCatalogData <- read.xlsx(file=paste(catalogFileName, 'xls', sep='.'), sheetName=projName)
+#  oldCatalogData <- readWorksheetFromFile(paste(catalogFileName, 'xls', sep='.'), sheet=projName)
+#  # get indexes for rows in catalogData that match thise present in oldCatalogData
+#  matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep='/'), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep='/'))
+#  # eliminate mateching rows
+#  newCatalogData <- catalogData[is.na(matches),]
+#  if(nrow(newCatalogData)>0) {
+#    catalogData <- rbind(oldCatalogData, newCatalogData)
+#  }
+#}
+
+
+
 #### parse a metadata file, yielding a named array #############################
-.parseMetadata <- function(path=getwd(), metadataFile='metadata.txt') {
+#' @export
+.parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName) {
   metadataFilePath <- paste(path, metadataFile, sep='/')
-  stopifnot(file.exists(metadataFilePath))
+  if(file.exists(metadataFilePath)==FALSE) {stop("File ", .pkgOptions$metadataFileName, " not found in ", path, ". Aborting.\n")}
   # open silently, as connection
   conn <- file(metadataFilePath, open='r')
   lines <- readLines(conn, warn=FALSE) # final lines with no CRLF could raise warnings

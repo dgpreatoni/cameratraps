@@ -64,12 +64,13 @@ updateCatalog <- function(verbose=FALSE) {
     sitePath <- paste(theRepo, site, sep='/')
     if(verbose) cat("  processing site ", site, "\n")
     # process, if any, medatata.txt here
-    if(file.exists(paste(sitePath, 'metadata.txt', sep='/'))) {
+    if(file.exists(paste(sitePath, .pkgOptions$metadataFileName, sep='/'))) {
       .pkgOptions$metadata[[site]] <- .parseMetadata(path=sitePath)
     } else {
       warning("  no medatata found for site ", site, "\n")
     }
     cameraNames <- listCameraDir(site)
+    #'@note do we have to store metadata as globals?
     .pkgOptions$metadata[[site]]$cameras <- list()
     siteData <- list()
     for(camera in cameraNames) { # process a camera directory
@@ -120,7 +121,18 @@ updateCatalog <- function(verbose=FALSE) {
     catalogData[diffCols[i]] <- NA
   }
   # make sure field types are all OK
-  catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=catalogData$Timezone)
+  # note that passing a 'tz' to as.POSIX* means that tz is a scalar (ugly but true): https://stackoverflow.com/questions/32084042/converting-to-local-time-in-r-vector-of-timezones
+  if(length(unique(catalogData$Timezone))>1) { # we have more than a single timezone, split up, set, reassemble
+    tmpCatalogByTz <- split(catalogData, catalogData$Timezone)
+    for(tz in names(tmpCatalogByTz)) {
+      tmpCatalogByTz[[tz]]$Photo.Timestamp <- as.POSIXct(paste(tmpCatalogByTz[[tz]]$Photo.Date, tmpCatalogByTz[[tz]]$Photo.Time), tz=tz)
+    }
+    catalogData <- do.call('rbind', tmpCatalogByTz)
+    rm(tmpCatalogByTz)
+  } else { # all data share a single timezone
+    tz <- catalogData[1,]$Timezone
+    catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=tz)
+  }
   invisible(catalogData)
 }
 
@@ -131,5 +143,70 @@ updateCatalog2 <- function(verbose=FALSE) {
   # just list directories
   theDirs <- list.dirs(path=theRepo, full.names=FALSE, recursive=TRUE)
   # remove @-names
-  theDirs <-theDirs[grep("^@", theDirs, invert=TRUE)]
+  theDirs <- theDirs[grep("^@", theDirs, invert=TRUE)]
+  # 1st element is current directory, drop it
+  theDirs <- theDirs[-1]
+  # assign depth levels
+  theDirs <- data.frame(path=theDirs, level=lengths(regmatches(theDirs, gregexpr("/", theDirs))))
+  theDirs$path <- as.character(theDirs$path)
+  # level 0 -> site; level 1 -> camera; level 2 -> sd card
+  theDirs$level <- factor(theDirs$level, levels=c(0,1,2), labels=c('site', 'camera', 'sdcard'))
+  # size up jobs
+  theCards <- theDirs[theDirs$level=='sdcard',]
+  # go parallel 1: get EXIF data from sdcard directories
+  EXIFData <- parallel::mclapply(paste(theRepo, theCards$path, sep='/'), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
+  EXIFData <- do.call('rbind', EXIFData)
+  # shape up to a standard catalog
+  emptyCatalog <- .createCatalog()
+  # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
+  # get columns in catalogData, but not in siteData
+  diffCols <- setdiff(names(emptyCatalog), names(EXIFData)) # order is mandatory
+  # add blank columns to siteData
+  for(i in 1:length(diffCols)) {
+    EXIFData[diffCols[i]] <- NA
+  }
+  # fix some fields content, LATER: add camera metadata
+  EXIFData$Raw.Path <- dirname(EXIFData$Raw.Names)
+  EXIFData$Raw.Names <- basename(as.character(EXIFData$Raw.Names))
+  # pull out camera directory name
+  camNames <- do.call('rbind',strsplit(EXIFData[,'Raw.Path'], '/'))
+  EXIFData$Sampling.Unit.Name <- camNames[,ncol(camNames)-1]
+  rm(camNames)
+  # get and attach camera metadata
+  theCameras <- theDirs[theDirs$level=='camera',]
+  # go parallel 2: get metadata from camera directories
+  cameraData <- parallel::mclapply(paste(theRepo, theCameras$path, sep='/'), function(x) .parseMetadata(x))
+  names(cameraData) <- basename(theCameras$path)
+  EXIFData <- split(EXIFData, EXIFData$Sampling.Unit.Name)
+  for(cam in names(cameraData)) { # attach camera metadata
+    if(nrow(EXIFData[[cam]]) > 0) {
+      EXIFData[[cam]]$Camera.Serial.Number <- cameraData[[cam]]$serial
+      EXIFData[[cam]]$Camera.Start.Date.and.Time <- cameraData[[cam]]$start
+      EXIFData[[cam]]$Camera.End.Date.and.Time <- cameraData[[cam]]$end
+      EXIFData[[cam]]$Camera.Manufacturer <- cameraData[[cam]]$make
+      EXIFData[[cam]]$Camera.Model <- cameraData[[cam]]$model
+      EXIFData[[cam]]$Latitude <- as.numeric(cameraData[[cam]]$lat)
+      EXIFData[[cam]]$Longitude <- as.numeric(cameraData[[cam]]$lon)
+    }
+  }
+  #'@note correct here for timezone?
+  EXIFData <- do.call('rbind', EXIFData)
+  #'@note get and attach site metadata
+
+
+
+    # make sure field types are all OK
+  # note that passing a 'tz' to as.POSIX* means that tz is a scalar (ugly but true): https://stackoverflow.com/questions/32084042/converting-to-local-time-in-r-vector-of-timezones
+  if(length(unique(catalogData$Timezone))>1) { # we have more than a single timezone, split up, set, reassemble
+    tmpCatalogByTz <- split(catalogData, catalogData$Timezone)
+    for(tz in names(tmpCatalogByTz)) {
+      tmpCatalogByTz[[tz]]$Photo.Timestamp <- as.POSIXct(paste(tmpCatalogByTz[[tz]]$Photo.Date, tmpCatalogByTz[[tz]]$Photo.Time), tz=tz)
+    }
+    catalogData <- do.call('rbind', tmpCatalogByTz)
+    rm(tmpCatalogByTz)
+  } else { # all data share a single timezone
+    tz <- catalogData[1,]$Timezone
+    catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=tz)
+  }
+  invisible(catalogData)
 }

@@ -24,10 +24,13 @@
 #### create a package environment to store some globals
 .pkgOptions <- new.env(hash=FALSE, parent=emptyenv())
 
+#### define some package-level globals. Globals are ugly.
+assign("catalogFileName", 'catalog', envir=.pkgOptions)
 assign("EXIFTOOL", NULL, envir=.pkgOptions)
+assign('metadata', list(), envir=.pkgOptions) # list is by Site
 assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
 assign("repositoryPath", NULL, envir=.pkgOptions)
-assign('metadata', list(), envir=.pkgOptions) # list is by Site
+
 
 #### package initialization
 .onLoad <- function(libname, pkgname) {
@@ -41,7 +44,7 @@ assign('metadata', list(), envir=.pkgOptions) # list is by Site
     #packageStartupMessage("\tEXIFtool found in", exiftool, '\n')
   } else {
     msg <- "Error: exiftool not found. Please check and install it."
-    msg <- ifelse(.Platform$OS.type=='windows', c(msg, "\nOn Windows remember to place exiftool.exe in C:\\WINDOWS."), msg)
+    msg <- ifelse(.Platform$OS.type=='windows', c(msg, "\nOn Windows remember to place exiftool(-k).exe in C:\\WINDOWS, and to rename it as exiftool.exe."), msg)
     stop(msg)
   }
 }
