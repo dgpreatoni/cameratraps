@@ -4,7 +4,7 @@
 # Convenience functions for cameratrap [ackage]
 # Note: <notes here>
 #
-# version 0.2
+# version 0.3
 # created fra 20160826
 # updated prea 20160829
 # updated prea 20161106
@@ -12,14 +12,19 @@
 # updated prea 20190502 moved startup functions to zzz.R
 #                       getwd() and setwd() aren't used anymore
 #                       timezone identification now uses lutz::tz_lookup_coords()
+# updated pres 20190509 added roxygen tags
 ###############################################################################
 
 #### tasks to be performed at package load must go in zzz.R
 
-
 #### package reserved dot-functions ###########################################
 
 #### list all directories in a directory ######################################
+#' @title List directories within a repository directory
+#' @description List all 'valid' directories inside a repository directtory
+#' @param path=getRepository() an existing path, used as a repository root.\br Normally, no parameter is needed, since is is assumed the repository path set with ĺink{setRepository}.
+#' @return A character vector containing the names of the directories in the specified directory, sorted alphabetiaclly. This command is non-recursive.
+#' @seealso \link{list.dirs}
 .getDirectoryContent <- function(path=getRepository()) {
   dirs <- list.dirs(path, full.names=FALSE, recursive=FALSE)
   # exclude directories whose name begins with "@"
@@ -28,6 +33,9 @@
 }
 
 #### create an empty dataframe for catalog data, assigns as global (column names as per Rovero and Zimmermann 2016)
+#' @title Create an (empty) catalog
+#' @description Create an empty dataframe with all the columns needed to store camera trap files data according to Rovern and Zimmermann.
+#' @return a data frame object.
 .createCatalog <- function() {
   catalogData <- data.frame(Organization.Name=character(),
                             Project.Name=character(),
@@ -82,6 +90,13 @@
 
 #### parse a metadata file, yielding a named array #############################
 #' @export
+#' @title Parse a \code{metadata.txt} file
+#' @description Reads a site or camera medatata file and stores data present therein as a list of key/value pairs.
+#' @param path=getwd() a valid path that acts either as a camera or site directory in a \code{cameratraps} repository.
+#' @param metadataFile a character, by default is \code{'metadata.txt'}. This can be also changed as package option.
+#' @param check boolean, default is \code{TRUE}. If the \code{'metadata.txt'} file is not present in \code{path} an error is returned. If \code{FALSE} the functions returns \code{NULL} if the metadata file is not found. Use with care.
+#' @return a list of values, each list element is named as per the 'key' found in the metadata file/
+#' @seealso \link{metadataFileFormat}
 .parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName, check=TRUE) {
   metadataFilePath <- paste(path, metadataFile, sep='/')
   if(file.exists(metadataFilePath)==TRUE) { # process file
@@ -156,6 +171,10 @@
 
 #### return path to image/video filesystem repository #########################
 #' @export
+#' @title Get the repository path
+#' @description Return the current \code{cameratraps} repository root path
+#' @return A character string or \code{NULL} and an error message, if a repository path has not been set.
+#' @seealso \link{setRepository}
 getRepository <- function() {
   rep <- get("repositoryPath", envir=.pkgOptions)
   if(is.null(rep)) {
@@ -167,7 +186,13 @@ getRepository <- function() {
 
 #### set path to image/video filesystem repository ############################
 #' @export
-#' @section TODO add existing catalog ingestion
+#' @note TODO add existing catalog ingestion
+#' @title Set the repository path
+#' @description Set the root directory for the current \code{cameratraps} repository
+#' @param path character, a valid path.
+#' @param create boolean: create that directory if it does not exist.
+#' @param attach boolean (not yet implemented), check whether a catalog file has already been made and use it.
+#' @return the catalog path as a charaxctes string, or \code{NULL} in case of an error.
 setRepository <- function(path=getwd(), create=FALSE) {
   path <- normalizePath(path, mustWork=FALSE)
   pathExists <- dir.exists(path)
@@ -192,6 +217,12 @@ setRepository <- function(path=getwd(), create=FALSE) {
 
 #### pull out EXIF data for all AVI and JPEG files inside a directory #########
 #' @export
+#' @title extract EXIF data
+#' @description get EXIF data from image and video files in a given directory
+#' @param EXIFDir character, a \code{cameratraps} "sd card directory", i.e. a directory where camera trap files are stored.
+#' @param tz character, see \link{OlsonNames}: a valit time zone designator, will be used ot fix EXIF timestamps accordin ti the time zone where the camera trap operated.
+#' @param offset numeric, a time offset in hours (decimal hours) that will be algebtically added to EXIF timestamps. Use with care.
+#' @return a dataframe containing file names (\code{Raw.Names}), a timestamp (\code{Photo.Time}), the type of file (\code{Photo.Type}, and the "camera directory" where each file is stored (\code{Sampling.Event}).
 getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0) {
   # for maintenance purpose: place here all known file extensions
   know_extensions <- c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4')

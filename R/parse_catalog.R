@@ -19,6 +19,8 @@
 # updated prea 20190506 cleaned up stuff, rewrote from scratch updateCatalog()
 ###############################################################################
 
+#'@note todo: updateCatalog*() functions should be renamed as 'createCatalog*()
+#'@note todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
 
 #### list all "site directories" in a repository ##############################
 #' @export
@@ -201,7 +203,7 @@ updateCatalog2 <- function(verbose=FALSE) {
   # go parallel 3: get metadata from site directories (if any)
   siteData <- parallel::mclapply(paste(theRepo, theSites$path, sep='/'), function(x) .parseMetadata(x, check=FALSE))
   names(siteData) <- basename(theSites$path)
-  #'@todo site data are read but not used, actually we use  'name'...
+  #'@note todo: site data are read but not used, actually we use  'name'...
   catalogData <- split(catalogData, substr(catalogData$Sampling.Unit.Name, 1, 8))
   for(site in names(siteData)) { # attach, if any, site metadata
     catalogData[[site]]$Site.Name <- siteData[[site]]$name
