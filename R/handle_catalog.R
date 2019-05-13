@@ -20,6 +20,7 @@
 #                       parallel experimental implementation of updateCatalog2
 ###############################################################################
 
+#'@note todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
 
 #### list all "site directories" in a repository ##############################
 #' @export

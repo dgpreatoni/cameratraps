@@ -27,10 +27,10 @@
 #### define some package-level globals. Globals are ugly.
 assign("catalogFileName", 'catalog', envir=.pkgOptions)
 assign("EXIFTOOL", NULL, envir=.pkgOptions)
-assign('metadata', list(), envir=.pkgOptions) # list is by Site
+assign('metadata', list(), envir=.pkgOptions) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
 assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
 assign("repositoryPath", NULL, envir=.pkgOptions)
-
+assign("catalog", NULL, envir=.pkgOptions) # this holds the _whole_ catalog
 
 #### package initialization
 .onLoad <- function(libname, pkgname) {

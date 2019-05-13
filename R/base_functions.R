@@ -36,6 +36,7 @@
 #' @title Create an (empty) catalog
 #' @description Create an empty dataframe with all the columns needed to store camera trap files data according to Rovern and Zimmermann.
 #' @return a data frame object.
+#' @note perhaps should be renamed to .createEmptyCatalog()
 .createCatalog <- function() {
   catalogData <- data.frame(Organization.Name=character(),
                             Project.Name=character(),
