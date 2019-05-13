@@ -4,7 +4,8 @@
 \alias{getEXIFData}
 \title{extract EXIF data}
 \usage{
-getEXIFData(EXIFDir = getwd(), tz = Sys.timezone(), offset = 0)
+getEXIFData(EXIFDir = getwd(), tz = Sys.timezone(), offset = 0,
+  verbose = FALSE)
 }
 \arguments{
 \item{EXIFDir}{character, a \code{cameratraps} "sd card directory", i.e. a directory where camera trap files are stored.}

@@ -12,7 +12,7 @@
 # updated prea 20190502 moved startup functions to zzz.R
 #                       getwd() and setwd() aren't used anymore
 #                       timezone identification now uses lutz::tz_lookup_coords()
-# updated pres 20190509 added roxygen tags
+# updated prea 20190509 added roxygen tags
 ###############################################################################
 
 #### tasks to be performed at package load must go in zzz.R
@@ -34,10 +34,9 @@
 
 #### create an empty dataframe for catalog data, assigns as global (column names as per Rovero and Zimmermann 2016)
 #' @title Create an (empty) catalog
-#' @description Create an empty dataframe with all the columns needed to store camera trap files data according to Rovern and Zimmermann.
+#' @description Create an empty dataframe with all the columns needed to store camera trap files data according to Rovero and Zimmermann.
 #' @return a data frame object.
-#' @note perhaps should be renamed to .createEmptyCatalog()
-.createCatalog <- function() {
+.createEmptyCatalog <- function() {
   catalogData <- data.frame(Organization.Name=character(),
                             Project.Name=character(),
                             Sampling.Unit.Name=character(),
@@ -79,7 +78,7 @@
 #  oldCatalogData <- read.xlsx(file=paste(catalogFileName, 'xls', sep='.'), sheetName=projName)
 #  oldCatalogData <- readWorksheetFromFile(paste(catalogFileName, 'xls', sep='.'), sheet=projName)
 #  # get indexes for rows in catalogData that match thise present in oldCatalogData
-#  matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep='/'), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep='/'))
+#  matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep=.Platform$file.sep), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep=.Platform$file.sep))
 #  # eliminate mateching rows
 #  newCatalogData <- catalogData[is.na(matches),]
 #  if(nrow(newCatalogData)>0) {
@@ -99,7 +98,7 @@
 #' @return a list of values, each list element is named as per the 'key' found in the metadata file/
 #' @seealso \link{metadataFileFormat}
 .parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName, check=TRUE) {
-  metadataFilePath <- paste(path, metadataFile, sep='/')
+  metadataFilePath <- paste(path, metadataFile, sep=.Platform$file.sep)
   if(file.exists(metadataFilePath)==TRUE) { # process file
     # open silently, as connection
     conn <- file(metadataFilePath, open='r')
@@ -224,21 +223,21 @@ setRepository <- function(path=getwd(), create=FALSE) {
 #' @param tz character, see \link{OlsonNames}: a valit time zone designator, will be used ot fix EXIF timestamps accordin ti the time zone where the camera trap operated.
 #' @param offset numeric, a time offset in hours (decimal hours) that will be algebtically added to EXIF timestamps. Use with care.
 #' @return a dataframe containing file names (\code{Raw.Names}), a timestamp (\code{Photo.Time}), the type of file (\code{Photo.Type}, and the "camera directory" where each file is stored (\code{Sampling.Event}).
-getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0) {
-  # for maintenance purpose: place here all known file extensions
-  know_extensions <- c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4')
+getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FALSE) {
+  # for maintenance purpose: all known file extensions are now declarde as package global .pkgOptions$known.extensions
+  #known_extensions <- c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4')
   # Some notes on time and time zone information:
   # as it seems, exiftool extracts timestamps assuming they are in the timezone of the machine where exiftool itself is running.
   # This can be undesirable, as sometimes we need the timestamps in the timezone the camera trap operated in, which may be different from the timezone we're working.
   # If a time zone name (i.e. a valid Olson time zone designator) or a time zone offset has been supplied, time zone information will be corrected accordingly.
   # check for time zone
   if(tz %in% OlsonNames() == FALSE) stop("Time zone name \"", tz, "\" is not compliant to Olson/IANA format.\n  Please see ?OlsonNames.")
-  tmpCsvFile <- tempfile(pattern=paste("EXIF", gsub('/', '-', EXIFDir), sep=''), fileext=".csv")
+  tmpCsvFile <- tempfile(pattern=paste("EXIF", gsub(.Platform$file.sep, '-', EXIFDir), sep=''), fileext=".csv")
   # fix csv file names containing spaces
   tmpCsvFile <- gsub(' ', '_', tmpCsvFile)
   # ask exiftool to pull out just the tags we need, some files can hide _binary_ tags that are difflcult to process...
   #@FIXME EXIFTOOL MUST BE PASSED the directory...
-  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 ', paste('-ext', know_extensions, collapse=' '), ' -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''))
+  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 ', paste('-ext', .pkgOptions$known.extensions, collapse=' '), ' -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''), stderr=verbose)
   if(res==0){ # EXIFTOOL exited nicely, we have a csv to parse
     EXIFData <- utils::read.csv(tmpCsvFile, stringsAsFactors=FALSE)
     unlink(tmpCsvFile)

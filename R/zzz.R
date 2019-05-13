@@ -5,8 +5,9 @@
 # Note: <notes here>
 #
 # version 0.1
-# created prea 20190502 moved startup functions here
-# updated
+# created prea 20190502 moved startup functions here.
+# updated prea 20190513 added some more globals, which are evil but useful.
+#
 ###############################################################################
 
 # You can learn more about package authoring with RStudio at:
@@ -25,12 +26,14 @@
 .pkgOptions <- new.env(hash=FALSE, parent=emptyenv())
 
 #### define some package-level globals. Globals are ugly.
-assign("catalogFileName", 'catalog', envir=.pkgOptions)
+assign("catalogFileName", '.catalog.rds', envir=.pkgOptions)
 assign("EXIFTOOL", NULL, envir=.pkgOptions)
 assign('metadata', list(), envir=.pkgOptions) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
 assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
 assign("repositoryPath", NULL, envir=.pkgOptions)
 assign("catalog", NULL, envir=.pkgOptions) # this holds the _whole_ catalog
+# all 'known' file extensions must go here.
+assign("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'), envir=.pkgOptions)
 
 #### package initialization
 .onLoad <- function(libname, pkgname) {

@@ -1,228 +1,63 @@
 ###############################################################################
-# UAGRA R Scripts - camera_trap                                parse_catalog.R
+# UAGRA R Scripts - camera_trap                               handle_catalog.R
 ###############################################################################
-# Functions to parse camera trap data stored on a live filesystem.
+# Functions to handle a camera trap data catalog.
 #
 # Notes
 # The package keeps a copy of the 'catalog' in memory. To minimize filesystem
-# traversals, if a cached version is found (as a .rda file in a project root
-# directory), the package just _updates_ the catalog (how?).
+# traversals, if a cached version is found (as a spreadsheet and/or a .rds file
+# (i.e. written by saveRDS()) in a project root directory), the package
+# first updates the catalog using the spreadsheet version , then rewrites the .rds.
 #
 #
 #
-# version 0.2
-# created fra  20160826
-# updated prea 20160829
-# updated prea 20161106
-# updated prea 20180119
-# updated prea 20180216
-# updated prea 20190506 cleaned up stuff, rewrote from scratch updateCatalog()
-#                       parallel experimental implementation of updateCatalog2
+# version 0.1
+# created prea 20190513
 ###############################################################################
 
 #'@note todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
 
-#### list all "site directories" in a repository ##############################
+#### check if a catalog exists ###############################################
+.catalogExists <- function() {
+  return(is.null(.pkgOptions$catalog)==FALSE)
+}
+
+#### create a catalog ########################################################
 #' @export
-listSiteDir <- function() {
-  siteList <- .getDirectoryContent()
-  return(siteList)
+createCatalog <- function(verbose=TRUE) {
+  if(.catalogExists()==TRUE) {
+    stop("a catalog exists, must be just updated")
+  } else {
+    .pkgOptions$catalog <- .createCatalog(verbose=verbose)
+    #'@note todo implement writing the catalog as a spreadsheet and as a .RData file.
+    saveRDS(.pkgOptions$catalog, file=paste(getRepository(), .pkgOptions$catalogFilename))
+    xlsx::write.xlsx2(.pkgOptions$catalog, file='catalog.xlsx', sheetName='Catalog', row.names=FALSE)
+  }
 }
 
 
-#### list all camera directories in a site directory #########################
+#### update catalog ###########################################################
+#' @title Update an existing catalog
+#' @description Check against the existing catalog and add just the new (if any) camera trap files and metadata.
+#' @return a data frame object.
 #' @export
-listCameraDir <- function(siteDirName) {
-  rep <- getRepository()
-  path <- paste(rep, siteDirName, sep='/')
-  camList <- .getDirectoryContent(path)
-  #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
-  return(camList)
-}
-
-
-#### list all data directories in a camera directory ##########################
-#' @export
-listDataDir <- function(siteDirName, cameraDirName) {
-  rep <- getRepository()
-  path <- paste(rep, siteDirName, cameraDirName, sep='/')
-  dataList <- .getDirectoryContent(path)
-  #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
-  # if need be, we can filter out here the directory names patterned as YYYY=MM-DD
-  # cardDir <- cardDir[grepl("[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}", cardDir$name),]
-  return(dataList)
-}
-
-
-#### create a catalog of a repository #########################################
-#' @export
-createCatalog <- function(verbose=FALSE) {
+updateCatalog <- function() {
   theRepo <- getRepository()
-  if(verbose) cat('Repository is ', theRepo, '\n')
-  siteNames <- listSiteDir()
-  if(verbose) cat("Sites: ", siteNames, "\n")
-  catalogData <- list()
-  for(site in siteNames) { # process a site directory
-    sitePath <- paste(theRepo, site, sep='/')
-    if(verbose) cat("  processing site ", site, "\n")
-    # process, if any, medatata.txt here
-    if(file.exists(paste(sitePath, .pkgOptions$metadataFileName, sep='/'))) {
-      .pkgOptions$metadata[[site]] <- .parseMetadata(path=sitePath)
-    } else {
-      warning("  no medatata found for site ", site, "\n")
+  if(.catalogExists()) {
+    # catalog exists, update it
+    cat("catalog exists, updating.")
+    allFiles <- .getAllFiles()
+    # check for matching (i.e. already present in the catalog) files
+    matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep='/'), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep='/'))
+    # eliminate mateching rows
+    newCatalogData <- catalogData[is.na(matches),]
+    if(nrow(newCatalogData)>0) {
+      catalogData <- rbind(oldCatalogData, newCatalogData)
     }
-    cameraNames <- listCameraDir(site)
-    #'@note do we have to store metadata as globals?
-    .pkgOptions$metadata[[site]]$cameras <- list()
-    siteData <- list()
-    for(camera in cameraNames) { # process a camera directory
-      cameraPath <- paste(sitePath, camera, sep='/')
-      if(verbose) cat("    processing camera ", camera, "\n")
-      # process metadata (must be there!)
-      .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
-      sdcardDirs <- listDataDir(site, camera)
-      cameraData <- list()
-      for(sdcard in sdcardDirs) { # process data dump directories
-        dataPath <- paste(cameraPath, sdcard, sep='/')
-        if(verbose) cat("      processing sdcard ", sdcard, "\n")
-        sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
-        if(nrow(sdcData) > 0) {
-          cameraData[[sdcard]] <- sdcData
-        }
-      } # sdcard (dataDirs) loop
-      # flatten sd card data
-      cameraData <- do.call('rbind', cameraData)
-      # fix some fields content, add camera metadata
-      cameraData$Raw.Path <- dataPath
-      cameraData$Raw.Names <- basename(as.character(cameraData$Raw.Names))
-      cameraData$Camera.Serial.Number <- .pkgOptions$metadata[[site]][[camera]][['serial']]
-      cameraData$Camera.Start.Date.and.Time <- .pkgOptions$metadata[[site]][[camera]][['start']]
-      cameraData$Camera.End.Date.and.Time <- .pkgOptions$metadata[[site]][[camera]][['end']]
-      cameraData$Camera.Manufacturer <- .pkgOptions$metadata[[site]][[camera]][['make']]
-      cameraData$Camera.Model <- .pkgOptions$metadata[[site]][[camera]][['model']]
-      cameraData$Latitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lat']])
-      cameraData$Longitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lon']])
-      cameraData$Sampling.Unit.Name <- camera
-      cameraData$Camera.Name <- .pkgOptions$metadata[[site]][[camera]][['name']]
-      cameraData$Site.Name <- .pkgOptions$metadata[[site]][['name']]
-      # stash
-      siteData[[camera]] <- cameraData
-    } # cameraDirs loop
-    # flatten camera data
-    siteData <- do.call('rbind', siteData)
-    catalogData[[site]] <- siteData
-  } # siteDirs loop
-  # flatten catalog data
-  catalogData <- do.call('rbind', catalogData)
-  row.names(catalogData) <- NULL
-  # shape up to a standard catalog
-  emptyCatalog <- .createCatalog()
-  # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
-  # get columns in catalogData, but not in siteData
-  diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
-  # add blank columns to siteData
-  for(i in 1:length(diffCols)) {
-    catalogData[diffCols[i]] <- NA
+
+
+
+  } else {
+    warning("a repository catalog does not exists for ", theRepo, ".\n  Create a catalog with ?createCatalog().")
   }
-  # make sure field types are all OK
-  # note that passing a 'tz' to as.POSIX* means that tz is a scalar (ugly but true): https://stackoverflow.com/questions/32084042/converting-to-local-time-in-r-vector-of-timezones
-  if(length(unique(catalogData$Timezone))>1) { # we have more than a single timezone, split up, set, reassemble
-    tmpCatalogByTz <- split(catalogData, catalogData$Timezone)
-    for(tz in names(tmpCatalogByTz)) {
-      tmpCatalogByTz[[tz]]$Photo.Timestamp <- as.POSIXct(paste(tmpCatalogByTz[[tz]]$Photo.Date, tmpCatalogByTz[[tz]]$Photo.Time), tz=tz)
-    }
-    catalogData <- do.call('rbind', tmpCatalogByTz)
-    rm(tmpCatalogByTz)
-  } else { # all data share a single timezone
-    tz <- catalogData[1,]$Timezone
-    catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=tz)
-  }
-  invisible(catalogData)
 }
-
-
-#### parallel version of createCatalog ########################################
-#' @export
-createCatalog2 <- function(verbose=FALSE) {
-  theRepo <- getRepository()
-  # just list directories
-  theDirs <- list.dirs(path=theRepo, full.names=FALSE, recursive=TRUE)
-  # remove @-names
-  theDirs <- theDirs[grep("^@", theDirs, invert=TRUE)]
-  # 1st element is current directory, drop it
-  theDirs <- theDirs[-1]
-  # assign depth levels
-  theDirs <- data.frame(path=theDirs, level=lengths(regmatches(theDirs, gregexpr("/", theDirs))))
-  theDirs$path <- as.character(theDirs$path)
-  # level 0 -> site; level 1 -> camera; level 2 -> sd card
-  theDirs$level <- factor(theDirs$level, levels=c(0,1,2), labels=c('site', 'camera', 'sdcard'))
-  # size up jobs
-  theCards <- theDirs[theDirs$level=='sdcard',]
-  # go parallel 1: get EXIF data from sdcard directories
-  catalogData <- parallel::mclapply(paste(theRepo, theCards$path, sep='/'), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
-  catalogData <- do.call('rbind', catalogData)
-  # shape up to a standard catalog
-  emptyCatalog <- .createCatalog()
-  # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
-  # get columns in catalogData, but not in siteData
-  diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
-  # add blank columns to siteData
-  for(i in 1:length(diffCols)) {
-    catalogData[diffCols[i]] <- NA
-  }
-  # fix some fields content, LATER: add camera metadata
-  catalogData$Raw.Path <- dirname(catalogData$Raw.Names)
-  catalogData$Raw.Names <- basename(as.character(catalogData$Raw.Names))
-  # pull out camera directory name
-  camNames <- do.call('rbind',strsplit(catalogData[,'Raw.Path'], '/'))
-  catalogData$Sampling.Unit.Name <- camNames[,ncol(camNames)-1]
-  rm(camNames)
-  # get and attach camera metadata
-  theCameras <- theDirs[theDirs$level=='camera',]
-  # go parallel 2: get metadata from camera directories
-  cameraData <- parallel::mclapply(paste(theRepo, theCameras$path, sep='/'), function(x) .parseMetadata(x))
-  names(cameraData) <- basename(theCameras$path)
-  catalogData <- split(catalogData, catalogData$Sampling.Unit.Name)
-  for(cam in names(cameraData)) { # attach camera metadata
-    if(nrow(catalogData[[cam]]) > 0) {
-      catalogData[[cam]]$Camera.Serial.Number <- cameraData[[cam]]$serial
-      catalogData[[cam]]$Camera.Start.Date.and.Time <- cameraData[[cam]]$start
-      catalogData[[cam]]$Camera.End.Date.and.Time <- cameraData[[cam]]$end
-      catalogData[[cam]]$Camera.Manufacturer <- cameraData[[cam]]$make
-      catalogData[[cam]]$Camera.Model <- cameraData[[cam]]$model
-      catalogData[[cam]]$Latitude <- as.numeric(cameraData[[cam]]$lat)
-      catalogData[[cam]]$Longitude <- as.numeric(cameraData[[cam]]$lon)
-      catalogData[[cam]]$Sampling.Unit.Name <- cam
-      catalogData[[cam]]$Camera.Name <-cameraData[[cam]]$name
-    }
-  }
-  #'@note correct here for timezone?
-  catalogData <- do.call('rbind', catalogData)
-  #'@note get and attach site metadata
-  theSites <- theDirs[theDirs$level=='site',]
-  # go parallel 3: get metadata from site directories (if any)
-  siteData <- parallel::mclapply(paste(theRepo, theSites$path, sep='/'), function(x) .parseMetadata(x, check=FALSE))
-  names(siteData) <- basename(theSites$path)
-  #'@note todo: site data are read but not used, actually we use  'name'...
-  catalogData <- split(catalogData, substr(catalogData$Sampling.Unit.Name, 1, 8))
-  for(site in names(siteData)) { # attach, if any, site metadata
-    catalogData[[site]]$Site.Name <- siteData[[site]]$name
-  }
-  catalogData <- do.call('rbind', catalogData)
-  # make sure field types are all OK
-  # note that passing a 'tz' to as.POSIX* means that tz is a scalar (ugly but true): https://stackoverflow.com/questions/32084042/converting-to-local-time-in-r-vector-of-timezones
-  if(length(unique(catalogData$Timezone))>1) { # we have more than a single timezone, split up, set, reassemble
-    tmpCatalogByTz <- split(catalogData, catalogData$Timezone)
-    for(tz in names(tmpCatalogByTz)) {
-      tmpCatalogByTz[[tz]]$Photo.Timestamp <- as.POSIXct(paste(tmpCatalogByTz[[tz]]$Photo.Date, tmpCatalogByTz[[tz]]$Photo.Time), tz=tz)
-    }
-    catalogData <- do.call('rbind', tmpCatalogByTz)
-    rm(tmpCatalogByTz)
-  } else { # all data share a single timezone
-    tz <- catalogData[1,]$Timezone
-    catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=tz)
-  }
-  invisible(catalogData)
-}
-
-

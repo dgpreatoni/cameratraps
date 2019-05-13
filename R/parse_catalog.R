@@ -3,13 +3,6 @@
 ###############################################################################
 # Functions to parse camera trap data stored on a live filesystem.
 #
-# Notes
-# The package keeps a copy of the 'catalog' in memory. To minimize filesystem
-# traversals, if a cached version is found (as a .rda file in a project root
-# directory), the package just _updates_ the catalog (how?).
-#
-#
-#
 # version 0.2
 # created fra  20160826
 # updated prea 20160829
@@ -20,6 +13,23 @@
 #                       parallel experimental implementation of updateCatalog2
 ###############################################################################
 
+
+#### get all file names in a catalog ##########################################
+.getAllFiles <- function() {
+  fileNames <- data.frame(Raw.Names=character(), Raw.Path=character()) # use field names from .createEmptyCatalog()
+  theRepo <- getRepository()
+  siteDirs <- listSiteDir()
+  for(s in siteDirs) {
+    cameraDirs <- listCameraDir(s)
+    for(c in cameraDirs) {
+      dataDirs <- listDataDir(s, c)
+      for(d in dataDirs) {
+        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste(.pkgOptions$known.extensions, collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
+      }
+    }
+  }
+  invisible(fileNames)
+}
 
 #### list all "site directories" in a repository ##############################
 #' @export
@@ -33,7 +43,7 @@ listSiteDir <- function() {
 #' @export
 listCameraDir <- function(siteDirName) {
   rep <- getRepository()
-  path <- paste(rep, siteDirName, sep='/')
+  path <- paste(rep, siteDirName, sep=.Platform$file.sep)
   camList <- .getDirectoryContent(path)
   #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
   return(camList)
@@ -44,7 +54,7 @@ listCameraDir <- function(siteDirName) {
 #' @export
 listDataDir <- function(siteDirName, cameraDirName) {
   rep <- getRepository()
-  path <- paste(rep, siteDirName, cameraDirName, sep='/')
+  path <- paste(rep, siteDirName, cameraDirName, sep=.Platform$file.sep)
   dataList <- .getDirectoryContent(path)
   #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
   # if need be, we can filter out here the directory names patterned as YYYY=MM-DD
@@ -53,19 +63,20 @@ listDataDir <- function(siteDirName, cameraDirName) {
 }
 
 
-#### create a catalog of a repository #########################################
+#### create (without storing) a catalog of a repository #######################
 #' @export
-createCatalog <- function(verbose=FALSE) {
+#' @note remove export before flight
+.createCatalog <- function(verbose=FALSE) {
   theRepo <- getRepository()
   if(verbose) cat('Repository is ', theRepo, '\n')
   siteNames <- listSiteDir()
   if(verbose) cat("Sites: ", siteNames, "\n")
   catalogData <- list()
   for(site in siteNames) { # process a site directory
-    sitePath <- paste(theRepo, site, sep='/')
+    sitePath <- paste(theRepo, site, sep=.Platform$file.sep)
     if(verbose) cat("  processing site ", site, "\n")
     # process, if any, medatata.txt here
-    if(file.exists(paste(sitePath, .pkgOptions$metadataFileName, sep='/'))) {
+    if(file.exists(paste(sitePath, .pkgOptions$metadataFileName, sep=.Platform$file.sep))) {
       .pkgOptions$metadata[[site]] <- .parseMetadata(path=sitePath)
     } else {
       warning("  no medatata found for site ", site, "\n")
@@ -75,14 +86,14 @@ createCatalog <- function(verbose=FALSE) {
     .pkgOptions$metadata[[site]]$cameras <- list()
     siteData <- list()
     for(camera in cameraNames) { # process a camera directory
-      cameraPath <- paste(sitePath, camera, sep='/')
+      cameraPath <- paste(sitePath, camera, sep=.Platform$file.sep)
       if(verbose) cat("    processing camera ", camera, "\n")
       # process metadata (must be there!)
       .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
       sdcardDirs <- listDataDir(site, camera)
       cameraData <- list()
       for(sdcard in sdcardDirs) { # process data dump directories
-        dataPath <- paste(cameraPath, sdcard, sep='/')
+        dataPath <- paste(cameraPath, sdcard, sep=.Platform$file.sep)
         if(verbose) cat("      processing sdcard ", sdcard, "\n")
         sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
         if(nrow(sdcData) > 0) {
@@ -115,7 +126,7 @@ createCatalog <- function(verbose=FALSE) {
   catalogData <- do.call('rbind', catalogData)
   row.names(catalogData) <- NULL
   # shape up to a standard catalog
-  emptyCatalog <- .createCatalog()
+  emptyCatalog <- .createEmptyCatalog()
   # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
   # get columns in catalogData, but not in siteData
   diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
@@ -142,7 +153,8 @@ createCatalog <- function(verbose=FALSE) {
 
 #### parallel version of createCatalog ########################################
 #' @export
-createCatalog2 <- function(verbose=FALSE) {
+#' @note remove export before flight
+.createCatalog2 <- function(verbose=FALSE) {
   theRepo <- getRepository()
   # just list directories
   theDirs <- list.dirs(path=theRepo, full.names=FALSE, recursive=TRUE)
@@ -151,17 +163,17 @@ createCatalog2 <- function(verbose=FALSE) {
   # 1st element is current directory, drop it
   theDirs <- theDirs[-1]
   # assign depth levels
-  theDirs <- data.frame(path=theDirs, level=lengths(regmatches(theDirs, gregexpr("/", theDirs))))
+  theDirs <- data.frame(path=theDirs, level=lengths(regmatches(theDirs, gregexpr(.Platform$file.sep, theDirs))))
   theDirs$path <- as.character(theDirs$path)
   # level 0 -> site; level 1 -> camera; level 2 -> sd card
   theDirs$level <- factor(theDirs$level, levels=c(0,1,2), labels=c('site', 'camera', 'sdcard'))
   # size up jobs
   theCards <- theDirs[theDirs$level=='sdcard',]
   # go parallel 1: get EXIF data from sdcard directories
-  catalogData <- parallel::mclapply(paste(theRepo, theCards$path, sep='/'), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
+  catalogData <- parallel::mclapply(paste(theRepo, theCards$path, sep=.Platform$file.sep), function(x) getEXIFData(x, tz=Sys.timezone(), offset=0)) # timezone data will be fixed after
   catalogData <- do.call('rbind', catalogData)
   # shape up to a standard catalog
-  emptyCatalog <- .createCatalog()
+  emptyCatalog <- .createEmptyCatalog()
   # align the catalog to the basic catalog structure, doing a 'fast merge' as per http://stackoverflow.com/a/32162311/3215235
   # get columns in catalogData, but not in siteData
   diffCols <- setdiff(names(emptyCatalog), names(catalogData)) # order is mandatory
@@ -173,13 +185,13 @@ createCatalog2 <- function(verbose=FALSE) {
   catalogData$Raw.Path <- dirname(catalogData$Raw.Names)
   catalogData$Raw.Names <- basename(as.character(catalogData$Raw.Names))
   # pull out camera directory name
-  camNames <- do.call('rbind',strsplit(catalogData[,'Raw.Path'], '/'))
+  camNames <- do.call('rbind',strsplit(catalogData[,'Raw.Path'], .Platform$file.sep))
   catalogData$Sampling.Unit.Name <- camNames[,ncol(camNames)-1]
   rm(camNames)
   # get and attach camera metadata
   theCameras <- theDirs[theDirs$level=='camera',]
   # go parallel 2: get metadata from camera directories
-  cameraData <- parallel::mclapply(paste(theRepo, theCameras$path, sep='/'), function(x) .parseMetadata(x))
+  cameraData <- parallel::mclapply(paste(theRepo, theCameras$path, sep=.Platform$file.sep), function(x) .parseMetadata(x))
   names(cameraData) <- basename(theCameras$path)
   catalogData <- split(catalogData, catalogData$Sampling.Unit.Name)
   for(cam in names(cameraData)) { # attach camera metadata
@@ -200,7 +212,7 @@ createCatalog2 <- function(verbose=FALSE) {
   #'@note get and attach site metadata
   theSites <- theDirs[theDirs$level=='site',]
   # go parallel 3: get metadata from site directories (if any)
-  siteData <- parallel::mclapply(paste(theRepo, theSites$path, sep='/'), function(x) .parseMetadata(x, check=FALSE))
+  siteData <- parallel::mclapply(paste(theRepo, theSites$path, sep=.Platform$file.sep), function(x) .parseMetadata(x, check=FALSE))
   names(siteData) <- basename(theSites$path)
   #'@note todo: site data are read but not used, actually we use  'name'...
   catalogData <- split(catalogData, substr(catalogData$Sampling.Unit.Name, 1, 8))
@@ -225,3 +237,4 @@ createCatalog2 <- function(verbose=FALSE) {
 }
 
 
+#### End Of File ####
