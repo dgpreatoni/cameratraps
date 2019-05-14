@@ -54,7 +54,12 @@ updateCatalog <- function() {
     if(nrow(allFiles)>0) {
       #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
       #' @note todo split allfiles by camera/site, apply EXIFtool, stash
-      catalogData <- rbind(oldCatalogData, newCatalogData)
+      cameraPaths <- unique(allFiles$Raw.Path)
+      cameraData <- getEXIFData(cameraPaths)
+      #' @note todo fix tz data
+      #' @note todo get other metadata and update
+      #' @note todo add to original catalog
+      .pkgOptions$catalog <- rbind(.pkgOptions$catalog, newCatalogData)
     }
 
 
