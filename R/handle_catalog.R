@@ -53,7 +53,7 @@ updateCatalog <- function() {
     allFiles <- allFiles[is.na(matches),]
     if(nrow(allFiles)>0) {
       #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
-
+      #' @note todo split allfiles by camera/site, apply EXIFtool, stash
       catalogData <- rbind(oldCatalogData, newCatalogData)
     }
 
