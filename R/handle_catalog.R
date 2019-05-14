@@ -48,10 +48,12 @@ updateCatalog <- function() {
     cat("catalog exists, updating.")
     allFiles <- .getAllFiles()
     # check for matching (i.e. already present in the catalog) files
-    matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep='/'), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep='/'))
-    # eliminate mateching rows
-    newCatalogData <- catalogData[is.na(matches),]
-    if(nrow(newCatalogData)>0) {
+    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/') , paste(.pkgOptions$catalog$Raw.Path, .pkgOptions$catalog$Raw.Names, sep='/'))
+    # eliminate mateching rows from allFiles
+    allFiles <- allFiles[is.na(matches),]
+    if(nrow(allFiles)>0) {
+      #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
+
       catalogData <- rbind(oldCatalogData, newCatalogData)
     }
 
