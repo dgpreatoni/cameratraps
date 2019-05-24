@@ -10,5 +10,5 @@ License: GPL (>=4.0)
 Encoding: UTF-8
 LazyData: true
 Note: 
-Imports: lutz,lubridate,xlsx
+Imports: lutz,lubridate,readxl,writexl
 RoxygenNote: 6.0.1

@@ -15,6 +15,7 @@
 
 
 #### get all file names in a catalog ##########################################
+#' @export
 .getAllFiles <- function() {
   fileNames <- data.frame(Raw.Names=character(), Raw.Path=character()) # use field names from .createEmptyCatalog()
   theRepo <- getRepository()
@@ -24,7 +25,7 @@
     for(c in cameraDirs) {
       dataDirs <- listDataDir(s, c)
       for(d in dataDirs) {
-        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste(.pkgOptions$known.extensions, collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
+        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste(.getOption("known.extensions"), collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
       }
     }
   }
@@ -39,7 +40,7 @@ listSiteDir <- function() {
 }
 
 
-#### list all camera directories in a site directory #########################
+#### list all camera directories in a site directory ##########################
 #' @export
 listCameraDir <- function(siteDirName) {
   rep <- getRepository()
@@ -64,8 +65,6 @@ listDataDir <- function(siteDirName, cameraDirName) {
 
 
 #### create (without storing) a catalog of a repository #######################
-#' @export
-#' @note remove export before flight
 .createCatalog <- function(verbose=FALSE) {
   theRepo <- getRepository()
   if(verbose) cat('Repository is ', theRepo, '\n')
@@ -152,8 +151,6 @@ listDataDir <- function(siteDirName, cameraDirName) {
 
 
 #### parallel version of createCatalog ########################################
-#' @export
-#' @note remove export before flight
 .createCatalog2 <- function(verbose=FALSE) {
   theRepo <- getRepository()
   # just list directories

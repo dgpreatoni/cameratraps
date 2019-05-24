@@ -68,10 +68,6 @@
 }
 
 
-#### check whether a catalog file is present ##################################
-#.catalogExists <- function() {
-#  return(file.exists())
-#}
 
 ## check if a catalog spreadsheet already exists: if yes, the existing catalog could contain user-entered information that must not be overwritten, such as species identification and repeated rows caused by multiple species in the same photo: all this has to be preserved
 #if(file.exists(paste(catalogFileName, 'xls', sep='.'))) { # re-align old catalog to new one, the csv version is not checked for existence
@@ -207,9 +203,15 @@ setRepository <- function(path=getwd(), create=FALSE) {
   }
   # assume path exists
   if(pathExists) {
-    #@TODO if path exists, check for an existing catalog
-    cat("Repository set to:", path, "\n")
-    assign("repositoryPath", normalizePath(path), envir=.pkgOptions)
+    message("Repository set to: ", path)
+    .setOption('repositoryPath', normalizePath(path))
+    .setOption('catalog', NULL)
+    # check for an existing catalog
+    if(any(.catalogFileExists())==TRUE) {
+      .readCatalogFile()
+    } else { # no catalog
+      message("  a catalog file is not present for the repository ", getRepository(), ".\n  see ?createCatalog().")
+    }
     invisible(path)
   }
 }

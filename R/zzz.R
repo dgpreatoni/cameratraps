@@ -20,36 +20,62 @@
 #   Check Package:             'Ctrl + Shift + E'
 #   Test Package:              'Ctrl + Shift + T'
 
-
-
 #### create a package environment to store some globals
 .pkgOptions <- new.env(hash=FALSE, parent=emptyenv())
 
-#### define some package-level globals. Globals are ugly.
-assign("catalogFileName", '.catalog.rds', envir=.pkgOptions)
-assign("EXIFTOOL", NULL, envir=.pkgOptions)
-assign('metadata', list(), envir=.pkgOptions) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
-assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
-assign("repositoryPath", NULL, envir=.pkgOptions)
-assign("catalog", NULL, envir=.pkgOptions) # this holds the _whole_ catalog
-# all 'known' file extensions must go here.
-assign("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'), envir=.pkgOptions)
 
-#### package initialization
+#### get/set options
+.getOption <- function(optname) {
+  get0(optname, envir=.pkgOptions)
+}
+
+.setOption <- function(optname, optvalue) {
+  assign(optname, optvalue, envir=.pkgOptions)
+}
+
+#### package initialization (attach)
+.onAttach <- function(libname, pkgname) {
+  packageStartupMessage("\nThis is cameratraps ", packageVersion('cameratraps'), ".\n")
+}
+
+#### package initialization (load)
 .onLoad <- function(libname, pkgname) {
   ## packageStartupMessage calls have been silenced, see ?.onAttach, "Good practice" section
-  #packageStartupMessage("This is package cameratraps\n")
+  ## startup messages must go in .onAttach
+  # packageStartupMessage("LOAD This is package cameratraps\n")
+  #### Define some package-level globals.
+  #### Globals are ugly.
+  #### Globals can be accessed with get(<option name>, envir=.pkgOptions)
+  #assign("catalogFileName", '.catalog.rds', envir=.pkgOptions)
+  .setOption("catalogFileName", '.catalog.rds')
+  #assign("EXIFTOOL", NULL, envir=.pkgOptions)
+  .setOption("EXIFTOOL", NULL)
+  #assign('metadata', list(), envir=.pkgOptions)
+  .setOption('metadata', list()) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
+  #assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
+  .setOption("metadataFileName", 'metadata.txt')
+  #assign("repositoryPath", NULL, envir=.pkgOptions)
+  .setOption("repositoryPath", NULL)
+  #assign("catalog", NULL, envir=.pkgOptions)
+  .setOption("catalog", NULL) # this is the _whole_ in-memory catalog
+  # all 'known' file extensions must go here.
+  #assign("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'), envir=.pkgOptions)
+  .setOption("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'))
+  #### place other initialization stuff here
+
   ## check for exiftool existence
-  # exiftool path can be accessed using get(EXIFTOOL, envir=.pkgOptions)
+  # exiftool path can be accessed using .getOption('EXIFTOOL')
   exiftool <- Sys.which('exiftool')
   if(exiftool!="") {
-    assign("EXIFTOOL", exiftool, envir=.pkgOptions)
-    #packageStartupMessage("\tEXIFtool found in", exiftool, '\n')
+    .setOption("EXIFTOOL", exiftool)
+    packageStartupMessage("  EXIFtool found in", exiftool, '\n')
   } else {
     msg <- "Error: exiftool not found. Please check and install it."
-    msg <- ifelse(.Platform$OS.type=='windows', c(msg, "\nOn Windows remember to place exiftool(-k).exe in C:\\WINDOWS, and to rename it as exiftool.exe."), msg)
+    msg <- ifelse(.Platform$OS.type=='windows', c(msg, "  On Windows remember to place exiftool(-k).exe in C:\\WINDOWS, and to rename it as exiftool.exe."), msg)
     stop(msg)
   }
 }
+
+
 
 #### End of File ####
