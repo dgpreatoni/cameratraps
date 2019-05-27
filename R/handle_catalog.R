@@ -80,6 +80,7 @@ updateCatalog <- function() {
     message("catalog exists, updating.")
     # get all the filenames in the physical catalog
     allFiles <- .getAllFiles()
+<<<<<<< HEAD
     catFiles <- .getOption("catalog")[,c('Raw.Path', 'Raw.Names')]
     # check for matching files (i.e. filenames already present in the catalog)
     matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/'), paste(catFiles$Raw.Path, catFiles$Raw.Names, sep='/'))
@@ -89,6 +90,21 @@ updateCatalog <- function() {
       #' @note @todo scan and get EXIF just for the new files, we have Raw.Path + Raw.Names
       #' @note @todo append to the existing catalog
       #' @note @todo write out xlsx and RDS files
+=======
+    # check for matching (i.e. already present in the catalog) files
+    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/') , paste(.pkgOptions$catalog$Raw.Path, .pkgOptions$catalog$Raw.Names, sep='/'))
+    # eliminate mateching rows from allFiles
+    allFiles <- allFiles[is.na(matches),]
+    if(nrow(allFiles)>0) {
+      #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
+      #' @note todo split allfiles by camera/site, apply EXIFtool, stash
+      cameraPaths <- unique(allFiles$Raw.Path)
+      cameraData <- getEXIFData(cameraPaths)
+      #' @note todo fix tz data
+      #' @note todo get other metadata and update
+      #' @note todo add to original catalog
+      .pkgOptions$catalog <- rbind(.pkgOptions$catalog, newCatalogData)
+>>>>>>> cad7f41d9a14d81ae55c2738aa328553a6af121c
     }
   } else {
     warning("a repository catalog does not exists for ", theRepo, ".\n  create a catalog with ?createCatalog().")
