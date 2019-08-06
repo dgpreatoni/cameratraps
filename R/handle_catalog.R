@@ -24,7 +24,8 @@
 }
 
 
-#### check if an XLSX catalog exists ##########################################
+#### check if a catalog file exists ###########################################
+#' @export
 .catalogFileExists <- function() {
   res <- logical()
   res['xlsx'] <- file.exists(paste(getRepository(), 'catalog.xlsx', sep='/'))
@@ -33,17 +34,19 @@
 }
 
 
-#### read in a catalog file ##################################################
+#### read in a catalog file ###################################################
 .readCatalogFile <- function() {
   whichCatalog <- .catalogFileExists()
-  if(all(whichCatalog)==FALSE) stop('No catalog file(s) found in ', getRepository(), ". Generate a catalog with createCatalog().")
+  if(any(whichCatalog)==FALSE) stop('No catalog file(s) found in ', getRepository(), ". Generate a catalog with createCatalog().")
   if(whichCatalog['xlsx']==TRUE) { # prefer xlsx version
     .setOption('catalog', readxl::read_excel(path=paste(getRepository(), 'catalog.xlsx', sep='/')))
     message('Catalog file for ', getRepository(), ' read.')
+    .setOption('catalogHasChanged', FALSE)
   } else {
     if(whichCatalog['RDS']==TRUE) { # use the RDF version as a backup
       .setOption('catalog', readRDS(file=paste(getRepository(), .getOption('catalogFileName'))))
       message('RDS catalog file for ', getRepository(), ' read.\n  RDS version is a backup copy and may be out of sync.')
+      .setOption('catalogHasChanged', FALSE)
     } else { # no catalog file present?
       stop("No catalog file present in repository ", getRepository())
     }
@@ -51,19 +54,33 @@
 }
 
 
+#### write out a catalog file ################################################
+.writeCatalogFile <- function() {
+  whichCatalog <- .catalogFileExists()
+  if(any(whichCatalog)==TRUE) { # we have at least a file catalog, warn and overwrite
+    warning("a catalog file(s) exists in ", getRepository(), " and will be overwritten.")
+  }
+  # suppress this if too verbose
+  message("saving RDS catalog to ", paste(getRepository(), .getOption('catalogFileName'), sep='/'), ".")
+  saveRDS(.getOption('catalog'), file=paste(getRepository(), .getOption('catalogFileName'), sep='/'))
+  message("saving xlsx catalog to ", paste(getRepository(), 'catalog.xlsx', sep='/'), ".")
+  writexl::write_xlsx(.getOption('catalog'), path=paste(getRepository(), 'catalog.xlsx', sep='/')) #, sheetName='Catalog', row.names=FALSE)
+  message("catalog files written to ", getRepository(), ".")
+  .setOption('catalogHasChanged', FALSE)
+}
+
+
 #### create a catalog ########################################################
+#' @title Create a catalog
+#' @description Check whether a catalog file exists, if not create and write to repository a new catalog.
+#' @return nothing. The catalog is stored as an in-package  object.
 #' @export
 createCatalog <- function(verbose=TRUE) {
   if(.catalogExists()==TRUE) {
-    stop("a catalog exists, must be just updated")
+    stop("a catalog exists, must be just updated. Use ?updateCatalog() instead.")
   } else {
     .setOption('catalog', .createCatalog(verbose=verbose))
-    #'@note todo implement writing the catalog as a spreadsheet and as a .RData file.
-    cat("about to save to ", paste(getRepository(), .getOption('catalogFileName'), sep='/'), "\n")
-    saveRDS(.getOption('catalog'), file=paste(getRepository(), .getOption('catalogFileName'), sep='/'))
-    cat("RDS saved, now saving ",paste(getRepository(), 'catalog.xlsx', sep='/'), "\n")
-    writexl::write_xlsx(.getOption('catalog'), path=paste(getRepository(), 'catalog.xlsx', sep='/')) #, sheetName='Catalog', row.names=FALSE)
-    message("catalog file written to ", getRepository())
+    .writeCatalogFile()
   }
 }
 
@@ -71,41 +88,40 @@ createCatalog <- function(verbose=TRUE) {
 #### update catalog ###########################################################
 #' @title Update an existing catalog
 #' @description Check against the existing catalog and add just the new (if any) camera trap files and metadata.
-#' @return a data frame object.
+#' @return nothing. The catalog is stored as an in-package  object.
 #' @export
 updateCatalog <- function() {
   theRepo <- getRepository()
-  if(.catalogExists()) {
+  if(.catalogExists()==TRUE) {
     # catalog exists, update it
     message("catalog exists, updating.")
     # get all the filenames in the physical catalog
-    allFiles <- .getAllFiles()
-<<<<<<< HEAD
-    catFiles <- .getOption("catalog")[,c('Raw.Path', 'Raw.Names')]
-    # check for matching files (i.e. filenames already present in the catalog)
-    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/'), paste(catFiles$Raw.Path, catFiles$Raw.Names, sep='/'))
-    # eliminate matching (i.e. already in the catalog) rows
-    newFiles <- allFiles[is.na(matches),]
-    if(nrow(newFiles)>0) { # we have new files!
-      #' @note @todo scan and get EXIF just for the new files, we have Raw.Path + Raw.Names
-      #' @note @todo append to the existing catalog
-      #' @note @todo write out xlsx and RDS files
-=======
-    # check for matching (i.e. already present in the catalog) files
-    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/') , paste(.pkgOptions$catalog$Raw.Path, .pkgOptions$catalog$Raw.Names, sep='/'))
-    # eliminate mateching rows from allFiles
-    allFiles <- allFiles[is.na(matches),]
-    if(nrow(allFiles)>0) {
-      #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
-      #' @note todo split allfiles by camera/site, apply EXIFtool, stash
-      cameraPaths <- unique(allFiles$Raw.Path)
-      cameraData <- getEXIFData(cameraPaths)
-      #' @note todo fix tz data
-      #' @note todo get other metadata and update
-      #' @note todo add to original catalog
-      .pkgOptions$catalog <- rbind(.pkgOptions$catalog, newCatalogData)
->>>>>>> cad7f41d9a14d81ae55c2738aa328553a6af121c
-    }
+    # allFiles <- .getAllFiles()
+    # catFiles <- .getOption("catalog")[,c('Raw.Path', 'Raw.Names')]
+    # FIX THAT
+    # # check for matching files (i.e. filenames already present in the catalog)
+    # matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/'), paste(catFiles$Raw.Path, catFiles$Raw.Names, sep='/'))
+    # # eliminate matching (i.e. already in the catalog) rows
+    # newFiles <- allFiles[is.na(matches),]
+    # if(nrow(newFiles)>0) { # we have new files!
+    #   #' @note @todo scan and get EXIF just for the new files, we have Raw.Path + Raw.Names
+    #   #' @note @todo append to the existing catalog
+    #   #' @note @todo write out xlsx and RDS files
+    #
+    # # check for matching (i.e. already present in the catalog) files
+    # matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/') , paste(.pkgOptions$catalog$Raw.Path, .pkgOptions$catalog$Raw.Names, sep='/'))
+    # # eliminate mateching rows from allFiles
+    # allFiles <- allFiles[is.na(matches),]
+    # if(nrow(allFiles)>0) {
+    #   #' @note todo here we have a list of (sparse) filenames for which the catalog has to be built...
+    #   #' @note todo split allfiles by camera/site, apply EXIFtool, stash
+    #   cameraPaths <- unique(allFiles$Raw.Path)
+    #   cameraData <- getEXIFData(cameraPaths)
+    #   #' @note todo fix tz data
+    #   #' @note todo get other metadata and update
+    #   #' @note todo add to original catalog
+    #  .pkgOptions$catalog <- rbind(.pkgOptions$catalog, newCatalogData)
+    #}
   } else {
     warning("a repository catalog does not exists for ", theRepo, ".\n  create a catalog with ?createCatalog().")
   }

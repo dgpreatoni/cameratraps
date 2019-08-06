@@ -46,21 +46,15 @@
   #### Define some package-level globals.
   #### Globals are ugly.
   #### Globals can be accessed with get(<option name>, envir=.pkgOptions)
-  #assign("catalogFileName", '.catalog.rds', envir=.pkgOptions)
-  .setOption("catalogFileName", '.catalog.rds')
-  #assign("EXIFTOOL", NULL, envir=.pkgOptions)
-  .setOption("EXIFTOOL", NULL)
-  #assign('metadata', list(), envir=.pkgOptions)
-  .setOption('metadata', list()) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
-  #assign("metadataFileName", 'metadata.txt', envir=.pkgOptions)
-  .setOption("metadataFileName", 'metadata.txt')
-  #assign("repositoryPath", NULL, envir=.pkgOptions)
-  .setOption("repositoryPath", NULL)
-  #assign("catalog", NULL, envir=.pkgOptions)
-  .setOption("catalog", NULL) # this is the _whole_ in-memory catalog
+  .setOption('catalog', NULL) # this is the _whole_ in-memory catalog
+  .setOption('catalogFileName', '.catalog.rds')
+  .setOption('catalogHasChanged', NULL) # "is dirty" flag, TRUE when the in-memory catalog has changed and should be written on disk
+  .setOption('EXIFTOOL', NULL)
   # all 'known' file extensions must go here.
-  #assign("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'), envir=.pkgOptions)
-  .setOption("known.extensions",  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'))
+  .setOption('known.extensions',  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'))
+  .setOption('metadata', list()) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
+  .setOption('metadataFileName', 'metadata.txt')
+  .setOption('repositoryPath', NULL)
   #### place other initialization stuff here
 
   ## check for exiftool existence

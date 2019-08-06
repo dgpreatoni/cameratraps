@@ -32,6 +32,7 @@
   invisible(fileNames)
 }
 
+
 #### list all "site directories" in a repository ##############################
 #' @export
 listSiteDir <- function() {

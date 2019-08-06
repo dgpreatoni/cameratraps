@@ -182,7 +182,6 @@ getRepository <- function() {
 
 #### set path to image/video filesystem repository ############################
 #' @export
-#' @note TODO add existing catalog ingestion
 #' @title Set the repository path
 #' @description Set the root directory for the current \code{cameratraps} repository
 #' @param path character, a valid path.
