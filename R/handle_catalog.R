@@ -15,7 +15,7 @@
 # created prea 20190513
 ###############################################################################
 
-#'@note todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
+#'@note @todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
 
 
 #### check if an in-memory catalog exists #####################################
@@ -32,6 +32,7 @@
   res['RDS'] <- file.exists(paste(getRepository(), .getOption('catalogFileName'), sep='/'))
   return(res)
 }
+
 
 #### returns the in-memory catalog ###########################################
 #' @export
@@ -106,11 +107,36 @@ updateCatalog <- function() {
     # get all the filenames in the current catalog
     catFiles <- .getOption("catalog")[,c('Raw.Path', 'Raw.Names')]
     # check for matching files (i.e. filenames already present in the catalog)
-    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep='/'), paste(catFiles$Raw.Path, catFiles$Raw.Names, sep='/'))
+    matches <- match(paste(allFiles$Raw.Path, allFiles$Raw.Names, sep=.Platform$file.sep), paste(catFiles$Raw.Path, catFiles$Raw.Names, sep=.Platform$file.sep))
     # eliminate matching files (i.e. already in the catalog)
     newFiles <- allFiles[is.na(matches),]
     if(nrow(newFiles)>0) { # we have new files!
-      #' @note @todo pull out unique paths
+      # pull out unique paths
+      pathsToCheck <- unique(newFiles$Raw.Path)
+      # delete the repository root
+      pathsToCheck <- gsub(paste0(getRepository(), .Platform$file.sep), "", pathsToCheck)
+      # what remains must be site, camera and data directories
+      pathsToCheck <- strsplit(pathsToCheck, split=.Platform$file.sep)
+      for(p in pathsToCheck) {
+        # get camera metadata, they're mandatory, they must be there
+        site <- p[1]
+        camera <- p[2]
+        sdc <- p[3]
+        message("  adding site: ", site, ", camera: ", camera, ", sdcard: ", sdc)
+        cameraPath <- paste(getRepository(), site, camera, sep=.Platform$file.sep)
+        dataPath <- paste(cameraPath, sdc, sep=.Platform$file.sep)
+        .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
+        # then get EXIF data with
+        sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
+        # data must be flattened and harmonised as per parse_catalog.R::.createCatalog() structure
+
+
+      }
+      #newSiteDirs <- unique(lapply(pathsToCheck, function(x) x[1]))
+      #newCameraDirs <- unique(lapply(pathsToCheck, function(x) x[2]))
+      #newDataDirs <- unique(lapply(pathsToCheck, function(x) x[3]))
+
+
       #' @note @todo scan and get EXIF just for the new files, we have Raw.Path + Raw.Names
       #' @note @todo append to the existing catalog
       #' @note @todo write out xlsx and RDS files
@@ -119,3 +145,6 @@ updateCatalog <- function() {
     warning("a repository catalog does not exists for ", theRepo, ".\n  create a catalog with ?createCatalog().")
   }
 }
+
+
+#### End Of File ####

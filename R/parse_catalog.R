@@ -41,7 +41,7 @@ listSiteDir <- function() {
 }
 
 
-#### list all camera directories in a site directory ##########################
+#### list all "camera directories" in a site directory ########################
 #' @export
 listCameraDir <- function(siteDirName) {
   rep <- getRepository()
@@ -52,7 +52,7 @@ listCameraDir <- function(siteDirName) {
 }
 
 
-#### list all data directories in a camera directory ##########################
+#### list all "data directories" in a camera directory ########################
 #' @export
 listDataDir <- function(siteDirName, cameraDirName) {
   rep <- getRepository()
