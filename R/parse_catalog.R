@@ -14,7 +14,7 @@
 ###############################################################################
 
 
-#### get all file names in a catalog ##########################################
+#### get all file names in a repository #######################################
 #' @export
 .getAllFiles <- function() {
   fileNames <- data.frame(Raw.Names=character(), Raw.Path=character()) # use field names from .createEmptyCatalog()
@@ -25,7 +25,7 @@
     for(c in cameraDirs) {
       dataDirs <- listDataDir(s, c)
       for(d in dataDirs) {
-        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste(.getOption("known.extensions"), collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
+        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste0(paste0(.getOption("known.extensions"),"$"), collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
       }
     }
   }
