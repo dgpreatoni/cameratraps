@@ -1,12 +1,13 @@
 ###############################################################################
-# UAGRA R Scripts - camera_trap                                           zzz.R
+# UAGRA R Scripts - Rcameratraps                                         zzz.R
 ###############################################################################
-# startup functions for cameratrap package
+# startup functions for Rcameratraps package
 # Note: <notes here>
 #
 # version 0.1
 # created prea 20190502 moved startup functions here.
-# updated prea 20190513 added some more globals, which are evil but useful.
+# updated prea 20190808 polished up code
+#         prea 20190513 added some more globals, which are evil but useful.
 #
 ###############################################################################
 
@@ -19,6 +20,9 @@
 #   Build and Reload Package:  'Ctrl + Shift + B'
 #   Check Package:             'Ctrl + Shift + E'
 #   Test Package:              'Ctrl + Shift + T'
+
+###############################################################################
+
 
 #### create a package environment to store some globals
 .pkgOptions <- new.env(hash=FALSE, parent=emptyenv())
@@ -33,16 +37,18 @@
   assign(optname, optvalue, envir=.pkgOptions)
 }
 
+
 #### package initialization (attach)
 .onAttach <- function(libname, pkgname) {
   packageStartupMessage("\nThis is cameratraps ", packageVersion('cameratraps'), ".\n")
 }
 
+
 #### package initialization (load)
 .onLoad <- function(libname, pkgname) {
-  ## packageStartupMessage calls have been silenced, see ?.onAttach, "Good practice" section
-  ## startup messages must go in .onAttach
-  # packageStartupMessage("LOAD This is package cameratraps\n")
+  # packageStartupMessage calls have been silenced, see ?.onAttach, "Good practice" section
+  # startup messages must go in .onAttach
+  # packageStartupMessage("This is package cameratraps\n")
   #### Define some package-level globals.
   #### Globals are ugly.
   #### Globals can be accessed with get(<option name>, envir=.pkgOptions)
@@ -57,8 +63,8 @@
   .setOption('repositoryPath', NULL)
   #### place other initialization stuff here
 
-  ## check for exiftool existence
-  # exiftool path can be accessed using .getOption('EXIFTOOL')
+  # check for exiftool existence
+  # once done, exiftool path can be accessed using .getOption('EXIFTOOL')
   exiftool <- Sys.which('exiftool')
   if(exiftool!="") {
     .setOption("EXIFTOOL", exiftool)
@@ -69,7 +75,6 @@
     stop(msg)
   }
 }
-
 
 
 #### End of File ####

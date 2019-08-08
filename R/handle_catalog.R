@@ -1,21 +1,20 @@
 ###############################################################################
-# UAGRA R Scripts - camera_trap                               handle_catalog.R
+# UAGRA R Scripts - Rcameratraps                              handle_catalog.R
 ###############################################################################
-# Functions to handle a camera trap data catalog.
-#
-# Notes
-# The package keeps a copy of the 'catalog' in memory. To minimize filesystem
-# traversals, if a cached version is found (as a spreadsheet and/or a .rds file
-# (i.e. written by saveRDS()) in a project root directory), the package
-# first updates the catalog using the spreadsheet version , then rewrites the .rds.
-#
-#
+# user-level functions to handle a camera trap data catalog.
+# Note: <notes here>
 #
 # version 0.1
-# created prea 20190513
+# created prea 20190808
+
 ###############################################################################
 
-#'@note @todo: implement a new updateCatalog*(), that actually _updates_, i.e. pulls out of the repository just a list of filenames in each and every sdcard directory, checks against existing catalog and adds just the new (if any) files.
+## tasks to be performed at package load must go in zzz.R
+
+
+#### package reserved dot-functions ###########################################
+# dot-functions aren't @export-ed
+# dot-functions aren't doxygenized
 
 
 #### check if an in-memory catalog exists #####################################
@@ -25,19 +24,11 @@
 
 
 #### check if a catalog file exists ###########################################
-#' @export
 .catalogFileExists <- function() {
   res <- logical()
   res['xlsx'] <- file.exists(paste(getRepository(), 'catalog.xlsx', sep='/'))
   res['RDS'] <- file.exists(paste(getRepository(), .getOption('catalogFileName'), sep='/'))
   return(res)
-}
-
-
-#### returns the in-memory catalog ###########################################
-#' @export
-getCatalog <- function() {
-  return(.getOption('catalog'))
 }
 
 
@@ -77,11 +68,26 @@ getCatalog <- function() {
 }
 
 
+#### public functions #########################################################
+
+
+#### returns the in-memory catalog ###########################################
+#' @export
+#' @title Access catalog data
+#' @description exports the repository catalog as a dataframe.
+#'
+#' Note that the catalog is stored as a package option, i.e. as an inaccessible in-package object, this functions males a copy of the catalog.
+#' @return a data frame.
+getCatalog <- function() {
+  return(.getOption('catalog'))
+}
+
+
 #### create a catalog ########################################################
+#' @export
 #' @title Create a catalog
 #' @description Check whether a catalog file exists, if not create and write to repository a new catalog.
 #' @return nothing. The catalog is stored as an in-package  object.
-#' @export
 createCatalog <- function(verbose=TRUE) {
   if(.catalogExists()==TRUE) {
     stop("a catalog exists, must be just updated. Use ?updateCatalog() instead.")
@@ -91,12 +97,11 @@ createCatalog <- function(verbose=TRUE) {
   }
 }
 
-
 #### update catalog ###########################################################
+#' @export
 #' @title Update an existing catalog
 #' @description Check against the existing catalog and add just the new (if any) camera trap files and metadata.
 #' @return nothing. The catalog is stored as an in-package  object.
-#' @export
 updateCatalog <- function(verbose=TRUE) {
   theRepo <- getRepository()
   if(.catalogExists()==TRUE) {

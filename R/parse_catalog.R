@@ -1,21 +1,30 @@
 ###############################################################################
-# UAGRA R Scripts - camera_trap                                parse_catalog.R
+# UAGRA R Scripts - Rcameratraps                              parse_catalog.R
 ###############################################################################
-# Functions to parse camera trap data stored on a live filesystem.
+# functions to parse camera trap data stored on a live filesystem
+# Note: <notes here>
 #
 # version 0.2
 # created fra  20160826
-# updated prea 20160829
-# updated prea 20161106
-# updated prea 20180119
-# updated prea 20180216
-# updated prea 20190506 cleaned up stuff, rewrote from scratch updateCatalog()
+# updated prea 20190808 cleaned up code, fixwd roxygen tags
+#         prea 20190506 cleaned up stuff, rewrote from scratch updateCatalog()
 #                       parallel experimental implementation of updateCatalog2
+# updated prea 20180216
+# updated prea 20180119
+# updated prea 20161106
+# updated prea 20160829
+
 ###############################################################################
+
+## tasks to be performed at package load must go in zzz.R
+
+
+#### package reserved dot-functions ###########################################
+# dot-functions aren't @export-ed
+# dot-functions aren't doxygenized
 
 
 #### get all file names in a repository #######################################
-#' @export
 .getAllFiles <- function() {
   fileNames <- data.frame(Raw.Names=character(), Raw.Path=character()) # use field names from .createEmptyCatalog()
   theRepo <- getRepository()
@@ -30,38 +39,6 @@
     }
   }
   invisible(fileNames)
-}
-
-
-#### list all "site directories" in a repository ##############################
-#' @export
-listSiteDir <- function() {
-  siteList <- .getDirectoryContent()
-  return(siteList)
-}
-
-
-#### list all "camera directories" in a site directory ########################
-#' @export
-listCameraDir <- function(siteDirName) {
-  rep <- getRepository()
-  path <- paste(rep, siteDirName, sep=.Platform$file.sep)
-  camList <- .getDirectoryContent(path)
-  #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
-  return(camList)
-}
-
-
-#### list all "data directories" in a camera directory ########################
-#' @export
-listDataDir <- function(siteDirName, cameraDirName) {
-  rep <- getRepository()
-  path <- paste(rep, siteDirName, cameraDirName, sep=.Platform$file.sep)
-  dataList <- .getDirectoryContent(path)
-  #cat("\trep-> ", rep, "\n\tsite-> ", siteDirName, "\n\tcam-> ", camList)
-  # if need be, we can filter out here the directory names patterned as YYYY=MM-DD
-  # cardDir <- cardDir[grepl("[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}", cardDir$name),]
-  return(dataList)
 }
 
 
@@ -152,6 +129,8 @@ listDataDir <- function(siteDirName, cameraDirName) {
 
 
 #### parallel version of createCatalog ########################################
+#' @note this is just experimental and should not be used
+#' @note looks like parallelisation doesn't speed up things
 .createCatalog2 <- function(verbose=FALSE) {
   theRepo <- getRepository()
   # just list directories
@@ -232,6 +211,48 @@ listDataDir <- function(siteDirName, cameraDirName) {
     catalogData$Photo.Timestamp <- as.POSIXct(paste(catalogData$Photo.Date, catalogData$Photo.Time), tz=tz)
   }
   invisible(catalogData)
+}
+
+
+#### public functions #########################################################
+
+
+#### list all "site directories" in a repository ##############################
+#' @export
+#' @title list repository structures
+#' @description list site directories in a repository
+#' @family repository functions
+listSiteDir <- function() {
+  siteList <- .getDirectoryContent()
+  return(siteList)
+}
+
+
+#### list all "camera directories" in a site directory ########################
+#' @export
+#' @title list repository structures
+#' @description list camera directories in a repository
+#' @family repository functions
+listCameraDir <- function(siteDirName) {
+  rep <- getRepository()
+  path <- paste(rep, siteDirName, sep=.Platform$file.sep)
+  camList <- .getDirectoryContent(path)
+  return(camList)
+}
+
+
+#### list all "data directories" in a camera directory ########################
+#' @export
+#' @title list repository structures
+#' @description list sd card data directories in a repository
+#' @family repository functions
+listDataDir <- function(siteDirName, cameraDirName) {
+  rep <- getRepository()
+  path <- paste(rep, siteDirName, cameraDirName, sep=.Platform$file.sep)
+  dataList <- .getDirectoryContent(path)
+    # if need be, we can filter out here the directory names patterned as YYYY=MM-DD
+  # cardDir <- cardDir[grepl("[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}", cardDir$name),]
+  return(dataList)
 }
 
 

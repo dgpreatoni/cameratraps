@@ -1,30 +1,30 @@
 ###############################################################################
-# UAGRA R Scripts - camera_trap                               base_functions.R
+# UAGRA R Scripts - Rcameratraps                             base_functions.R
 ###############################################################################
-# Convenience functions for cameratrap [ackage]
+# convenience functions for Rcameratraps package
 # Note: <notes here>
 #
 # version 0.3
 # created fra 20160826
-# updated prea 20160829
-# updated prea 20161106
-# updated prea 20180119
-# updated prea 20190502 moved startup functions to zzz.R
+# updated prea 20190808 cleaned up code, fixed roxygen tags
+#         prea 20190509 added roxygen tags
+#         prea 20190502 moved startup functions to zzz.R
 #                       getwd() and setwd() aren't used anymore
 #                       timezone identification now uses lutz::tz_lookup_coords()
-# updated prea 20190509 added roxygen tags
+#         prea 20180119
+#         prea 20161106
+#         prea 20160829
 ###############################################################################
 
-#### tasks to be performed at package load must go in zzz.R
+## tasks to be performed at package load must go in zzz.R
+
 
 #### package reserved dot-functions ###########################################
+# dot-functions aren't @export-ed
+# dot-functions aren't doxygenized
+
 
 #### list all directories in a directory ######################################
-#' @title List directories within a repository directory
-#' @description List all 'valid' directories inside a repository directtory
-#' @param path=getRepository() an existing path, used as a repository root.\br Normally, no parameter is needed, since is is assumed the repository path set with ĺink{setRepository}.
-#' @return A character vector containing the names of the directories in the specified directory, sorted alphabetiaclly. This command is non-recursive.
-#' @seealso \link{list.dirs}
 .getDirectoryContent <- function(path=getRepository()) {
   dirs <- list.dirs(path, full.names=FALSE, recursive=FALSE)
   # exclude directories whose name begins with "@"
@@ -33,9 +33,6 @@
 }
 
 #### create an empty dataframe for catalog data, assigns as global (column names as per Rovero and Zimmermann 2016)
-#' @title Create an (empty) catalog
-#' @description Create an empty dataframe with all the columns needed to store camera trap files data according to Rovero and Zimmermann.
-#' @return a data frame object.
 .createEmptyCatalog <- function() {
   catalogData <- data.frame(Organization.Name=character(),
                             Project.Name=character(),
@@ -64,35 +61,10 @@
                             Camera.Name=character(),
                             Site.Name=character(),
                             Sequence.Info=numeric())
-  #assign("catalogData", catalogData, envir=.pkgOptions)
 }
 
 
-
-## check if a catalog spreadsheet already exists: if yes, the existing catalog could contain user-entered information that must not be overwritten, such as species identification and repeated rows caused by multiple species in the same photo: all this has to be preserved
-#if(file.exists(paste(catalogFileName, 'xls', sep='.'))) { # re-align old catalog to new one, the csv version is not checked for existence
-#  oldCatalogData <- read.xlsx(file=paste(catalogFileName, 'xls', sep='.'), sheetName=projName)
-#  oldCatalogData <- readWorksheetFromFile(paste(catalogFileName, 'xls', sep='.'), sheet=projName)
-#  # get indexes for rows in catalogData that match thise present in oldCatalogData
-#  matches <- match(paste(catalogData$Sampling.Event,catalogData$Raw.Names, sep=.Platform$file.sep), paste(oldCatalogData$Sampling.Event, oldCatalogData$Raw.Names, sep=.Platform$file.sep))
-#  # eliminate mateching rows
-#  newCatalogData <- catalogData[is.na(matches),]
-#  if(nrow(newCatalogData)>0) {
-#    catalogData <- rbind(oldCatalogData, newCatalogData)
-#  }
-#}
-
-
-
 #### parse a metadata file, yielding a named array #############################
-#' @export
-#' @title Parse a \code{metadata.txt} file
-#' @description Reads a site or camera medatata file and stores data present therein as a list of key/value pairs.
-#' @param path=getwd() a valid path that acts either as a camera or site directory in a \code{cameratraps} repository.
-#' @param metadataFile a character, by default is \code{'metadata.txt'}. This can be also changed as package option.
-#' @param check boolean, default is \code{TRUE}. If the \code{'metadata.txt'} file is not present in \code{path} an error is returned. If \code{FALSE} the functions returns \code{NULL} if the metadata file is not found. Use with care.
-#' @return a list of values, each list element is named as per the 'key' found in the metadata file/
-#' @seealso \link{metadataFileFormat}
 .parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName, check=TRUE) {
   metadataFilePath <- paste(path, metadataFile, sep=.Platform$file.sep)
   if(file.exists(metadataFilePath)==TRUE) { # process file
@@ -165,6 +137,7 @@
 
 #### public functions #########################################################
 
+
 #### return path to image/video filesystem repository #########################
 #' @export
 #' @title Get the repository path
@@ -180,15 +153,16 @@ getRepository <- function() {
   }
 }
 
+
 #### set path to image/video filesystem repository ############################
 #' @export
 #' @title Set the repository path
 #' @description Set the root directory for the current \code{cameratraps} repository
 #' @param path character, a valid path.
+#' @param attach boolean: check whether a catalog file has already been made and use it.
 #' @param create boolean: create that directory if it does not exist.
-#' @param attach boolean (not yet implemented), check whether a catalog file has already been made and use it.
 #' @return the catalog path as a charaxctes string, or \code{NULL} in case of an error.
-setRepository <- function(path=getwd(), create=FALSE) {
+setRepository <- function(path=getwd(), attach=TRUE, create=FALSE) {
   path <- normalizePath(path, mustWork=FALSE)
   pathExists <- dir.exists(path)
   if(pathExists==FALSE) {
@@ -206,10 +180,12 @@ setRepository <- function(path=getwd(), create=FALSE) {
     .setOption('repositoryPath', normalizePath(path))
     .setOption('catalog', NULL)
     # check for an existing catalog
-    if(any(.catalogFileExists())==TRUE) {
-      .readCatalogFile()
-    } else { # no catalog
-      message("  a catalog file is not present for the repository ", getRepository(), ".\n  see ?createCatalog().")
+    if(attach==TRUE) {
+      if(any(.catalogFileExists())==TRUE) {
+        .readCatalogFile()
+      } else { # no catalog
+        warning("  a catalog file is not present for the repository ", getRepository(), ".\n  see ?createCatalog().")
+      }
     }
     invisible(path)
   }
@@ -225,8 +201,7 @@ setRepository <- function(path=getwd(), create=FALSE) {
 #' @param offset numeric, a time offset in hours (decimal hours) that will be algebtically added to EXIF timestamps. Use with care.
 #' @return a dataframe containing file names (\code{Raw.Names}), a timestamp (\code{Photo.Time}), the type of file (\code{Photo.Type}, and the "camera directory" where each file is stored (\code{Sampling.Event}).
 getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FALSE) {
-  # for maintenance purpose: all known file extensions are now declarde as package global .pkgOptions$known.extensions
-  #known_extensions <- c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4')
+  # For maintenance purpose: all known file extensions are now declarde as package global .pkgOptions$known.extensions, see zzz.R.
   # Some notes on time and time zone information:
   # as it seems, exiftool extracts timestamps assuming they are in the timezone of the machine where exiftool itself is running.
   # This can be undesirable, as sometimes we need the timestamps in the timezone the camera trap operated in, which may be different from the timezone we're working.
@@ -271,5 +246,6 @@ getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FA
   }
   invisible(EXIFData)
 }
+
 
 #### End of File ####
