@@ -161,12 +161,14 @@ If need be, further tags can be defined.
 [2] Olson/IANA time zones and time zone names can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 [3] Dates and time must be expressed according to the ISO 8601 standard (UNI EN 28601, 1993), as follows:
-  yyyy-MM-ddTHH:mm:ssK
+
+    yyyy-MM-ddTHH:mm:ssK
+
 where:
-  yyyy year as four-digits number
-    MM month as two-digits number
-    dd day of month as two-digits number
-    HH hour, 24-hour format, as two-digits number
-    mm minutes as two-digits number
-    ss seconds (or '00' if exact seconds unknown) as two-digits number
-     K time zone offset, expressed as =hh:mm where "=" is either "+" or "-", "hh" is the hour offset and "mm" is tne minutes offset (usually '00'). Use the 'Z' (Zulu time) designator if and only if timestamps are _actually_ in Zulu (UTC) time. IF no offset is specified, the timezone key will be used, if the timezone key is not present, a lookup on GeoNames web services will be attempted to identify the timezone from latitude and longitude.
+  - ``yyyy`` year as four-digits number
+  - ``MM`` month as two-digits number
+  - ``dd`` day of month as two-digits number
+  - ``HH`` hour, 24-hour format, as two-digits number
+  - ``mm`` minutes as two-digits number
+  - ``ss`` seconds (or '``00``' if exact seconds unknown) as two-digits number
+  - ``K`` time zone offset, expressed as ``=hh:mm`` where "``=``" is either "``+``" or "``-``", "``hh``" is the hour offset and "``mm``" is tne minutes offset (usually '``00``'). Use the '``Z``' (Zulu time) designator if and only if timestamps are _actually_ in Zulu (UTC) time. If no offset is specified, the ``timezone:`` key will be used, if the ``timezone:`` key is not present, a lookup on GeoNames web services will be attempted to identify the timezone from latitude and longitude.
