@@ -138,32 +138,27 @@ If need be, further tags can be defined.
 
 | Tag      | Description                         | Values                                                            |
 |----------|-------------------------------------|-------------------------------------------------------------------|
-| make:    |[C] Make of the camera trap          | Please use consistent naming and spelling                         |
+| [1]make:   |[C] Make of the camera trap          | Please use consistent naming and spelling |
+| [1]model:  |[C] Model of the camera trap         | Please use consistent naming and spelling |
+| [1[]serial:|[C] Serial number of the camera trap | Transcribe the exact serial number |
+| [1]lat:    |[C] Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326) |
+| [1]lon:    |[C] Camera position, longitude       | Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326) |
+| timezone:  |[C] Time zone of camera position     | Use time Olson/IANA zone name [2] as from R OlsonNames() function |
+| [1]start:  |[C] Camera start timestamp           | Use date and time expressed in ISO 8601 format [3] |
+| [1]end:    |[C] Camera end timestamp             | Use date and time expressed in ISO 8601 format [3] |
+| height:    |[C] Camera ground height             | Height from ground at which the camera treap has been placed |
+| aspect:    |[C] Camera lens aspect               | Aspect (in degrees, 0 to 360) at which the camera lens was facing |
+| placed:    |[C] Who placed the camera            | First name, last name |
+| removed:   |[C] Who removed the camera           | First name, last name |
+| name:      |[C][S] Site or Camera name           | Please use consistent naming and spelling |
 
+ [1]: the tag is mandatory
+ [S]: tag is recognized for “sites”, ignored otherwise.
+ [C]: tag is recognized for “cameras”, ignored otherwise.
 
+[2] Olson/IANA time zones and time zone names can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
-
-
-*model:   |[C] Model of the camera trap         | Please use consistent naming and spelling
-*serial:  |[C] Serial number of the camera trap | Please transcribe the exact serial number
-*lat:     |[C] Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326)
-*lon:     |[C] Camera position, longitude       | Use raw longitude in decimal degrees, WGS84 (i.e. EPSG:4326)
- timezone:|[C] Time zone of camera position     | Use time Olson/IANA zone name [1] as from R OlsonNames() function
-*start:   |[C] Camera start timestamp           | Use date and time expressed in ISO 8601 format [2]
-*end:     |[C] Camera end timestamp             | Use date and time expressed in ISO 8601 format [2]
- height:  |[C] Camera ground height             | Height from ground at which the camera treap has been placed
- aspect:  |[C] Camera lens aspect               | Aspect (in degrees, 0 to 360) at which the camera lens was facing
- placed:  |[C] Who placed the camera            | First name, last name
- removed: |[C] Who removed the camera           | First name, last name
- name:    |[CS] Site or Camera name             | Please use consistent naming and spelling
---------
- *: the tag is mandatory
- S: tag is recognized for “sites”, ignored otherwise.
- C: tag is recognized for “cameras”, ignored otherwise.
-
-[1] Olson/IANA time zones and time zone names can be found at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-
-[2] Dates and time must be expressed according to the ISO 8601 standard (UNI EN 28601, 1993), as follows:
+[3] Dates and time must be expressed according to the ISO 8601 standard (UNI EN 28601, 1993), as follows:
   yyyy-MM-ddTHH:mm:ssK
 where:
   yyyy year as four-digits number
