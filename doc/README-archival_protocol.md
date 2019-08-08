@@ -77,54 +77,54 @@ A memory card directory must contain files "as they were" on the original memory
 Example structure
 -----------------
 
-<data warehouse>
-  |
-  +- PRJ Project One
-  |   +- catalog.xlsx
-  |   +- PRJ-S001
-  |   |   + metadata.txt
-  |   |   +- PRJ-S001-C001
-  |   |   |   + metadata.txt
-  |   |   |   + IMG0001.JPG
-  |   |   |   + IMG0002.JPG
-  |   |   |   + IMG0003.JPG
-  |   |   |   + ...
-  |   |   +- PRJ-S001-C002
-  |   |       + metadata.txt
-  |   |       + IMG0001.JPG
-  |   |       + IMG0002.JPG
-  |   |       + IMG0003.JPG
-  |   |       + ...  
-  |   +- PRJ-S002
-  |       +- PRJ-S002-C001
-  |       |   + metadata.txt
-  |       |   + IMG0001.JPG
-  |       |   + IMG0002.JPG
-  |       |   + IMG0003.JPG
-  |       |   + ...
-  |       +- PRJ-S002-C001
-  |       |   + metadata.txt
-  |       |   + IMG0001.JPG
-  |       |   + IMG0002.JPG
-  |       |   + IMG0003.JPG
-  |       |   + ...
-  +- ZZZ Project Two
-      +- catalog.xls
-      +- ZZZ-S001
-          + metadata.txt
-          +- ZZZ-S001-C001
-          |   + metadata.txt
-          |   + IMG0001.JPG
-          |   + IMG0002.JPG
-          |   + IMG0003.JPG
-          |   + ...
-          +- ZZZ-S001-C002
+    <data warehouse>
+      |
+      +- PRJ Project One
+      |   +- catalog.xlsx
+      |   +- PRJ-S001
+      |   |   + metadata.txt
+      |   |   +- PRJ-S001-C001
+      |   |   |   + metadata.txt
+      |   |   |   + IMG0001.JPG
+      |   |   |   + IMG0002.JPG
+      |   |   |   + IMG0003.JPG
+      |   |   |   + ...
+      |   |   +- PRJ-S001-C002
+      |   |       + metadata.txt
+      |   |       + IMG0001.JPG
+      |   |       + IMG0002.JPG
+      |   |       + IMG0003.JPG
+      |   |       + ...  
+      |   +- PRJ-S002
+      |       +- PRJ-S002-C001
+      |       |   + metadata.txt
+      |       |   + IMG0001.JPG
+      |       |   + IMG0002.JPG
+      |       |   + IMG0003.JPG
+      |       |   + ...
+      |       +- PRJ-S002-C001
+      |       |   + metadata.txt
+      |       |   + IMG0001.JPG
+      |       |   + IMG0002.JPG
+      |       |   + IMG0003.JPG
+      |       |   + ...
+      +- ZZZ Project Two
+          +- catalog.xls
+          +- ZZZ-S001
               + metadata.txt
-              + IMG0001.JPG
-              + IMG0002.JPG
-              + IMG0003.JPG
-              + ...  
-
+              +- ZZZ-S001-C001
+              |   + metadata.txt
+              |   + IMG0001.JPG
+              |   + IMG0002.JPG
+              |   + IMG0003.JPG
+              |   + ...
+              +- ZZZ-S001-C002
+                  + metadata.txt
+                  + IMG0001.JPG
+                  + IMG0002.JPG
+                  + IMG0003.JPG
+                  + ...  
+    
 
 Metadata file
 -------------
