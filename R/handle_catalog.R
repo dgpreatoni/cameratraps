@@ -97,11 +97,11 @@ createCatalog <- function(verbose=TRUE) {
 #' @description Check against the existing catalog and add just the new (if any) camera trap files and metadata.
 #' @return nothing. The catalog is stored as an in-package  object.
 #' @export
-updateCatalog <- function() {
+updateCatalog <- function(verbose=TRUE) {
   theRepo <- getRepository()
   if(.catalogExists()==TRUE) {
     # catalog exists, update it
-    message("catalog exists, updating.")
+    if(verbose) message("catalog exists, checking for updates...")
     # get all the filenames in the physical repository
     allFiles <- .getAllFiles()
     # get all the filenames in the current catalog
@@ -111,35 +111,63 @@ updateCatalog <- function() {
     # eliminate matching files (i.e. already in the catalog)
     newFiles <- allFiles[is.na(matches),]
     if(nrow(newFiles)>0) { # we have new files!
+      if(verbose) message("  adding ", nrow(newFiles), " new files.")
       # pull out unique paths
       pathsToCheck <- unique(newFiles$Raw.Path)
       # delete the repository root
       pathsToCheck <- gsub(paste0(getRepository(), .Platform$file.sep), "", pathsToCheck)
       # what remains must be site, camera and data directories
       pathsToCheck <- strsplit(pathsToCheck, split=.Platform$file.sep)
+      newData <- list()
       for(p in pathsToCheck) {
         # get camera metadata, they're mandatory, they must be there
         site <- p[1]
         camera <- p[2]
         sdc <- p[3]
-        message("  adding site: ", site, ", camera: ", camera, ", sdcard: ", sdc)
-        cameraPath <- paste(getRepository(), site, camera, sep=.Platform$file.sep)
+        if(verbose) message("  adding site: ", site, ", camera: ", camera, ", sdcard: ", sdc)
+        sitePath <- paste(getRepository(), site, sep=.Platform$file.sep)
+        cameraPath <- paste(sitePath, camera, sep=.Platform$file.sep)
         dataPath <- paste(cameraPath, sdc, sep=.Platform$file.sep)
-        .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
+        newSiteMetadata <- .parseMetadata(path=sitePath)
+        newCameraMetadata <- .parseMetadata(path=cameraPath)
         # then get EXIF data with
-        sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
+        sdcData <- getEXIFData(dataPath, tz=newCameraMetadata[['timezone']])
         # data must be flattened and harmonised as per parse_catalog.R::.createCatalog() structure
-
-
+        # fix some fields content, add camera metadata
+        sdcData$Raw.Path <- dataPath
+        sdcData$Raw.Names <- basename(as.character(sdcData$Raw.Names))
+        sdcData$Camera.Serial.Number <- newCameraMetadata[['serial']]
+        sdcData$Camera.Start.Date.and.Time <- newCameraMetadata[['start']]
+        sdcData$Camera.End.Date.and.Time <- newCameraMetadata[['end']]
+        sdcData$Camera.Manufacturer <- newCameraMetadata[['make']]
+        sdcData$Camera.Model <- newCameraMetadata[['model']]
+        #@TODO check if lat is in metadata, if not, derive it
+        sdcData$Latitude <- as.numeric(newCameraMetadata[['lat']])
+        #@TODO check if lon is in metadata, if not, derive it
+        sdcData$Longitude <- as.numeric(newCameraMetadata[['lon']])
+        sdcData$Sampling.Unit.Name <- camera
+        sdcData$Camera.Name <- newCameraMetadata[['name']]
+        sdcData$Site.Name <- newSiteMetadata[['name']]
+        sdcData$Organization.Name <- NA
+        sdcData$Project.Name <- NA
+        sdcData$Photo.Timestamp <-  as.POSIXct(paste(sdcData$Photo.Date, sdcData$Photo.Time), tz=newCameraMetadata[['timezone']])
+        sdcData$Genus <- NA
+        sdcData$Species <- NA
+        sdcData$Number.of.Animals <- NA
+        sdcData$Person.Identifying.the.Photo <- NA
+        sdcData$Person.setting.up.the.Camera <- ifelse(is.null(newCameraMetadata[['placed']]),NA,newCameraMetadata[['placed']])
+        sdcData$Person.picking.up.the.Camera <- ifelse(is.null(newCameraMetadata[['removed']]),NA,newCameraMetadata[['removed']])
+        sdcData$Sequence.Info <- NA
+        # stash
+        newData[[camera]] <- sdcData
       }
-      #newSiteDirs <- unique(lapply(pathsToCheck, function(x) x[1]))
-      #newCameraDirs <- unique(lapply(pathsToCheck, function(x) x[2]))
-      #newDataDirs <- unique(lapply(pathsToCheck, function(x) x[3]))
-
-
-      #' @note @todo scan and get EXIF just for the new files, we have Raw.Path + Raw.Names
-      #' @note @todo append to the existing catalog
-      #' @note @todo write out xlsx and RDS files
+      # flatten and append
+      newData <- do.call('rbind', newData)
+      catalog <- rbind(getCatalog(), newData)
+      .setOption('catalog', catalog)
+      .writeCatalogFile()
+    } else {
+      if(verbose) message("  no new files to add.")
     }
   } else {
     warning("a repository catalog does not exists for ", theRepo, ".\n  create a catalog with ?createCatalog().")

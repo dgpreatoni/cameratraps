@@ -3,7 +3,7 @@ library(cameratraps)
 
 theRepo <- '/data/testrepository'
 #theRepo <- '/lan/archivio/Camera traps/SBR-Sun Bear Project/'
-#theRepo <- '/lan/archivio/Video/IBS-IBIS_SACRO/alimentazione'
+theRepo <- '/lan/archivio/Video/IBS-IBIS_SACRO/alimentazione'
 setRepository(theRepo)
 
 ## Not Run:
@@ -11,4 +11,4 @@ setRepository(theRepo)
 
 # createCatalog()
 
-ctl <- updateCatalog2(verbose=TRUE)
+ctl <- updateCatalog()

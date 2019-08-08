@@ -102,7 +102,7 @@ listDataDir <- function(siteDirName, cameraDirName) {
       } # sdcard (dataDirs) loop
       # flatten sd card data
       cameraData <- do.call('rbind', cameraData)
-      # fix some fields content, add camera metadata
+      # fix some fields content, add camera metadata, this also happens in handle_catalog.R::updateCatalog()
       cameraData$Raw.Path <- dataPath
       cameraData$Raw.Names <- basename(as.character(cameraData$Raw.Names))
       cameraData$Camera.Serial.Number <- .pkgOptions$metadata[[site]][[camera]][['serial']]
