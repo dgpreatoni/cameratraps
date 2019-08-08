@@ -136,9 +136,14 @@ A tag is made by a reserved word (see table below), followed by a colon, (option
 Note that some of the tags (the ones with an asterisk) are mandatory for a metadata file placed inside a camera trap directory.
 If need be, further tags can be defined.
 
- Tag        Description                         Values
-----------+-------------------------------------+-------------------------------------------------------------------
-*make:    |[C] Make of the camera trap          | Please use consistent naming and spelling
+| Tag      | Description                         | Values                                                            |
+|----------|-------------------------------------|-------------------------------------------------------------------|
+| make:    |[C] Make of the camera trap          | Please use consistent naming and spelling                         |
+
+
+
+
+
 *model:   |[C] Model of the camera trap         | Please use consistent naming and spelling
 *serial:  |[C] Serial number of the camera trap | Please transcribe the exact serial number
 *lat:     |[C] Camera position, latitude        | Use raw latitude in decimal degrees, WGS84 (i.e. EPSG:4326)
