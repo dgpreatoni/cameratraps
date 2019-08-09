@@ -1,4 +1,4 @@
-# Rcameratraps
+# R - cameratraps
 R package to handle camera trap data
 
 # References
