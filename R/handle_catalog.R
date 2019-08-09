@@ -26,8 +26,8 @@
 #### check if a catalog file exists ###########################################
 .catalogFileExists <- function() {
   res <- logical()
-  res['xlsx'] <- file.exists(paste(getRepository(), 'catalog.xlsx', sep='/'))
-  res['RDS'] <- file.exists(paste(getRepository(), .getOption('catalogFileName'), sep='/'))
+  res['xlsx'] <- file.exists(paste(getRepository(), 'catalog.xlsx', sep=.Platform$file.sep))
+  res['RDS'] <- file.exists(paste(getRepository(), .getOption('catalogFileName'), sep=.Platform$file.sep))
   return(res)
 }
 
@@ -37,7 +37,7 @@
   whichCatalog <- .catalogFileExists()
   if(any(whichCatalog)==FALSE) stop('No catalog file(s) found in ', getRepository(), ". Generate a catalog with createCatalog().")
   if(whichCatalog['xlsx']==TRUE) { # prefer xlsx version
-    .setOption('catalog', readxl::read_excel(path=paste(getRepository(), 'catalog.xlsx', sep='/')))
+    .setOption('catalog', readxl::read_excel(path=paste(getRepository(), 'catalog.xlsx', sep=.Platform$file.sep)))
     message('Catalog file for ', getRepository(), ' read.')
     .setOption('catalogHasChanged', FALSE)
   } else {
@@ -59,10 +59,10 @@
     warning("a catalog file(s) exists in ", getRepository(), " and will be overwritten.")
   }
   # suppress this if too verbose
-  message("saving RDS catalog to ", paste(getRepository(), .getOption('catalogFileName'), sep='/'), ".")
-  saveRDS(.getOption('catalog'), file=paste(getRepository(), .getOption('catalogFileName'), sep='/'))
-  message("saving xlsx catalog to ", paste(getRepository(), 'catalog.xlsx', sep='/'), ".")
-  writexl::write_xlsx(.getOption('catalog'), path=paste(getRepository(), 'catalog.xlsx', sep='/')) #, sheetName='Catalog', row.names=FALSE)
+  message("saving RDS catalog to ", paste(getRepository(), .getOption('catalogFileName'), sep=.Platform$file.sep), ".")
+  saveRDS(.getOption('catalog'), file=paste(getRepository(), .getOption('catalogFileName'), sep=.Platform$file.sep))
+  message("saving xlsx catalog to ", paste(getRepository(), 'catalog.xlsx', sep=.Platform$file.sep), ".")
+  writexl::write_xlsx(.getOption('catalog'), path=paste(getRepository(), 'catalog.xlsx', sep=.Platform$file.sep)) #, sheetName='Catalog', row.names=FALSE)
   message("catalog files written to ", getRepository(), ".")
   .setOption('catalogHasChanged', FALSE)
 }
@@ -139,7 +139,7 @@ updateCatalog <- function(verbose=TRUE) {
         sdcData <- getEXIFData(dataPath, tz=newCameraMetadata[['timezone']])
         # data must be flattened and harmonised as per parse_catalog.R::.createCatalog() structure
         # fix some fields content, add camera metadata
-        sdcData$Raw.Path <- dataPath
+        sdcData$Raw.Path <- paste(site, camera, sdc, sep=.Platform$file.sep) # store paths relative to getRepository()
         sdcData$Raw.Names <- basename(as.character(sdcData$Raw.Names))
         sdcData$Camera.Serial.Number <- newCameraMetadata[['serial']]
         sdcData$Camera.Start.Date.and.Time <- newCameraMetadata[['start']]

@@ -80,7 +80,7 @@
       # flatten sd card data
       cameraData <- do.call('rbind', cameraData)
       # fix some fields content, add camera metadata, this also happens in handle_catalog.R::updateCatalog()
-      cameraData$Raw.Path <- dataPath
+      cameraData$Raw.Path <- paste(site, camera, sdcard, sep=.Platform$file.sep) # store paths relative to getRepository()
       cameraData$Raw.Names <- basename(as.character(cameraData$Raw.Names))
       cameraData$Camera.Serial.Number <- .pkgOptions$metadata[[site]][[camera]][['serial']]
       cameraData$Camera.Start.Date.and.Time <- .pkgOptions$metadata[[site]][[camera]][['start']]
@@ -159,7 +159,7 @@
     catalogData[diffCols[i]] <- NA
   }
   # fix some fields content, LATER: add camera metadata
-  catalogData$Raw.Path <- dirname(catalogData$Raw.Names)
+  catalogData$Raw.Path <- gsub(theRepo, "", dirname(catalogData$Raw.Names)) # store paths relative to getRepository()
   catalogData$Raw.Names <- basename(as.character(catalogData$Raw.Names))
   # pull out camera directory name
   camNames <- do.call('rbind',strsplit(catalogData[,'Raw.Path'], .Platform$file.sep))

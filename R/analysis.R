@@ -11,6 +11,22 @@
 
 
 
+#### set filtering ############################################################
+#' @export
+filterCatalog <- function(aFilter) {
+  .setOption("catalogHasFilter", aFilter)
+
+}
+
+#### access catalog data ######################################################
+#' @export
+catalog <- function(filter=TRUE) {
+  ctl <- .getOption('catalog')
+  return(ctl[,filter])
+}
+
+
+
 #### calculates effort matrix (events per hour) ###############################
 #' @export
 #' @note TODO implement catalog filtering
