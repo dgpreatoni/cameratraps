@@ -52,46 +52,39 @@
   for(site in siteNames) { # process a site directory
     sitePath <- paste(theRepo, site, sep=.Platform$file.sep)
     if(verbose) cat("  processing site ", site, "\n")
-    # process, if any, medatata.txt here
-    if(file.exists(paste(sitePath, .pkgOptions$metadataFileName, sep=.Platform$file.sep))) {
-      .pkgOptions$metadata[[site]] <- .parseMetadata(path=sitePath)
-    } else {
-      warning("  no medatata found for site ", site, "\n")
-    }
+    site.metadata <- .parseMetadata(path=sitePath, check=FALSE) # get site metadata, if any
     cameraNames <- listCameraDir(site)
-    #'@note do we have to store metadata as globals?
-    .pkgOptions$metadata[[site]]$cameras <- list()
     siteData <- list()
     for(camera in cameraNames) { # process a camera directory
       cameraPath <- paste(sitePath, camera, sep=.Platform$file.sep)
       if(verbose) cat("    processing camera ", camera, "\n")
-      # process metadata (must be there!)
-      .pkgOptions$metadata[[site]][[camera]] <- .parseMetadata(path=cameraPath)
+      camera.metadata <- .parseMetadata(path=cameraPath, check=TRUE) # gat camera metadata, they must be there
       sdcardDirs <- listDataDir(site, camera)
       cameraData <- list()
-      for(sdcard in sdcardDirs) { # process data dump directories
+      for(sdcard in sdcardDirs) { # process sd card dump directories
         dataPath <- paste(cameraPath, sdcard, sep=.Platform$file.sep)
         if(verbose) cat("      processing sdcard ", sdcard, "\n")
-        sdcData <- getEXIFData(dataPath, tz=.pkgOptions$metadata[[site]][[camera]][['timezone']])
+        sdcData <- getEXIFData(dataPath, tz=camera.metadata$timezone)
         if(nrow(sdcData) > 0) {
+          # fix file system dependant fields at sdcard level
+          sdcData$Raw.Path <- paste(site, camera, sdcard, sep=.Platform$file.sep)  # store paths relative to getRepository()
+          sdcData$Raw.Names <- basename(as.character(sdcData$Raw.Names))
           cameraData[[sdcard]] <- sdcData
         }
-      } # sdcard (dataDirs) loop
+      } # sdcard (sdcardDirs) loop
       # flatten sd card data
       cameraData <- do.call('rbind', cameraData)
-      # fix some fields content, add camera metadata, this also happens in handle_catalog.R::updateCatalog()
-      cameraData$Raw.Path <- paste(site, camera, sdcard, sep=.Platform$file.sep) # store paths relative to getRepository()
-      cameraData$Raw.Names <- basename(as.character(cameraData$Raw.Names))
-      cameraData$Camera.Serial.Number <- .pkgOptions$metadata[[site]][[camera]][['serial']]
-      cameraData$Camera.Start.Date.and.Time <- .pkgOptions$metadata[[site]][[camera]][['start']]
-      cameraData$Camera.End.Date.and.Time <- .pkgOptions$metadata[[site]][[camera]][['end']]
-      cameraData$Camera.Manufacturer <- .pkgOptions$metadata[[site]][[camera]][['make']]
-      cameraData$Camera.Model <- .pkgOptions$metadata[[site]][[camera]][['model']]
-      cameraData$Latitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lat']])
-      cameraData$Longitude <- as.numeric(.pkgOptions$metadata[[site]][[camera]][['lon']])
+      # fix camera metadata, this also happens in handle_catalog.R::updateCatalog()
+      cameraData$Camera.Serial.Number <- camera.metadata$serial
+      cameraData$Camera.Start.Date.and.Time <- camera.metadata$start
+      cameraData$Camera.End.Date.and.Time <- camera.metadata$end
+      cameraData$Camera.Manufacturer <- camera.metadata$make
+      cameraData$Camera.Model <- camera.metadata$model
+      cameraData$Latitude <- as.numeric(camera.metadata$lat)
+      cameraData$Longitude <- as.numeric(camera.metadata$lon)
       cameraData$Sampling.Unit.Name <- camera
-      cameraData$Camera.Name <- .pkgOptions$metadata[[site]][[camera]][['name']]
-      cameraData$Site.Name <- .pkgOptions$metadata[[site]][['name']]
+      cameraData$Camera.Name <- camera.metadata$name
+      cameraData$Site.Name <- ifelse(is.null(site.metadata$name), site, site.metadata$name)
       # stash
       siteData[[camera]] <- cameraData
     } # cameraDirs loop

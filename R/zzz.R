@@ -59,7 +59,7 @@
   .setOption('EXIFTOOL', NULL)
   # all 'known' file extensions must go here.
   .setOption('known.extensions',  c('AVI', 'avi', 'JPG', 'jpg', 'M4V', 'm4v', 'MOV', 'mov', 'MOD', 'mod', 'MP4', 'mp4'))
-  .setOption('metadata', list()) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
+  #.setOption('metadata', list()) #' @note list is by Site, should be refined better: if we store the whole catalog, storing metadata is useless
   .setOption('metadataFileName', 'metadata.txt')
   .setOption('repositoryPath', NULL)
   #### place other initialization stuff here

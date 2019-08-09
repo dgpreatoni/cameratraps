@@ -65,6 +65,7 @@
 
 
 #### parse a metadata file, yielding a named array #############################
+#' @export
 .parseMetadata <- function(path=getwd(), metadataFile=.pkgOptions$metadataFileName, check=TRUE) {
   metadataFilePath <- paste(path, metadataFile, sep=.Platform$file.sep)
   if(file.exists(metadataFilePath)==TRUE) { # process file
