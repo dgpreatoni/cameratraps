@@ -1,0 +1,5 @@
+- updateMetadata function: traverses an existing catalog, gets site and camera dirs names, rereads metadata files and updates the catalog
+
+- cameraPoints function: uses the catalog to create a sp:SpatialPointsDataframe object. Points are camera locations, i.e. are deduplicated spatially
+
+- export catalog to Google Drive?
