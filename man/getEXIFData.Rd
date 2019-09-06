@@ -13,6 +13,8 @@ getEXIFData(EXIFDir = getwd(), tz = Sys.timezone(), offset = 0,
 \item{tz}{character, see \link{OlsonNames}: a valit time zone designator, will be used ot fix EXIF timestamps accordin ti the time zone where the camera trap operated.}
 
 \item{offset}{numeric, a time offset in hours (decimal hours) that will be algebtically added to EXIF timestamps. Use with care.}
+
+\item{verbose}{logical,}
 }
 \value{
 a dataframe containing file names (\code{Raw.Names}), a timestamp (\code{Photo.Time}), the type of file (\code{Photo.Type}, and the "camera directory" where each file is stored (\code{Sampling.Event}).

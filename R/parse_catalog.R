@@ -26,7 +26,7 @@
 
 
 #### get all file names in a repository #######################################
-.getAllFiles <- function() {
+.getAllFiles <- function(relative=FALSE) {
   fileNames <- data.frame(Raw.Names=character(), Raw.Path=character()) # use field names from .createEmptyCatalog()
   theRepo <- getRepository()
   siteDirs <- listSiteDir()
@@ -46,6 +46,9 @@
         }
       }
     }
+  }
+  if(relative==TRUE) { # strip repository path
+    fileNames$Raw.Path <- gsub(paste0(theRepo, .Platform$file.sep), '', fileNames$Raw.Path)
   }
   invisible(fileNames)
 }
@@ -67,7 +70,7 @@
     for(camera in cameraNames) { # process a camera directory
       cameraPath <- paste(sitePath, camera, sep=.Platform$file.sep)
       if(verbose) cat("    processing camera ", camera, "\n")
-      camera.metadata <- .parseMetadata(path=cameraPath, check=TRUE) # gat camera metadata, they must be there
+      camera.metadata <- .parseMetadata(path=cameraPath, check=TRUE) # get camera metadata, they must be there
       sdcardDirs <- listDataDir(site, camera)
       cameraData <- list()
       for(sdcard in sdcardDirs) { # process sd card dump directories

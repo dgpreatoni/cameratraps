@@ -200,6 +200,7 @@ setRepository <- function(path=getwd(), attach=TRUE, create=FALSE) {
 #' @param EXIFDir character, a \code{cameratraps} "sd card directory", i.e. a directory where camera trap files are stored.
 #' @param tz character, see \link{OlsonNames}: a valit time zone designator, will be used ot fix EXIF timestamps accordin ti the time zone where the camera trap operated.
 #' @param offset numeric, a time offset in hours (decimal hours) that will be algebtically added to EXIF timestamps. Use with care.
+#' @param verbose logical,
 #' @return a dataframe containing file names (\code{Raw.Names}), a timestamp (\code{Photo.Time}), the type of file (\code{Photo.Type}, and the "camera directory" where each file is stored (\code{Sampling.Event}).
 getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FALSE) {
   # For maintenance purpose: all known file extensions are now declarde as package global .pkgOptions$known.extensions, see zzz.R.
@@ -214,7 +215,7 @@ getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FA
   tmpCsvFile <- gsub(' ', '_', tmpCsvFile)
   # ask exiftool to pull out just the tags we need, some files can hide _binary_ tags that are difflcult to process...
   #@FIXME EXIFTOOL MUST BE PASSED the directory...
-  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 ', paste('-ext', .pkgOptions$known.extensions, collapse=' '), ' -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''), stderr=verbose)
+  res <- system2(.pkgOptions$EXIFTOOL, args=paste('-FileModifyDate -Filetype -CHARSET UTF8 ', paste('-ext', .pkgOptions$known.extensions, collapse=' '), ' -csv "',  normalizePath(EXIFDir), '" > ', tmpCsvFile, sep=''), stderr=FALSE)
   if(res==0){ # EXIFTOOL exited nicely, we have a csv to parse
     EXIFData <- utils::read.csv(tmpCsvFile, stringsAsFactors=FALSE)
     unlink(tmpCsvFile)
@@ -244,6 +245,9 @@ getEXIFData <- function(EXIFDir=getwd(), tz=Sys.timezone(), offset=0, verbose=FA
     #EXIFData$Photo.Type <- as.character(EXIFData$Photo.Type)
   } else { # EXIFTOOL call returned an error, create an empty dataframe
     EXIFData <- data.frame(Raw.Names=character(), Photo.Time=character(),Photo.Type=character(), Sampling.Event=character())
+    if(verbose==TRUE) {
+      warning("call to EXIFTOOL returned errors in ", EXIFDir, '\n  ', res, '\n' )
+    }
   }
   invisible(EXIFData)
 }

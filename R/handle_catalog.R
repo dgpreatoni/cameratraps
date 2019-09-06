@@ -108,7 +108,7 @@ updateCatalog <- function(verbose=TRUE) {
     # catalog exists, update it
     if(verbose) message("catalog exists, checking for updates...")
     # get all the filenames in the physical repository
-    allFiles <- .getAllFiles()
+    allFiles <- .getAllFiles(relative=TRUE)
     # get all the filenames in the current catalog
     catFiles <- .getOption("catalog")[,c('Raw.Path', 'Raw.Names')]
     # check for matching files (i.e. filenames already present in the catalog)
@@ -119,9 +119,7 @@ updateCatalog <- function(verbose=TRUE) {
       if(verbose) message("  adding ", nrow(newFiles), " new files.")
       # pull out unique paths
       pathsToCheck <- unique(newFiles$Raw.Path)
-      # delete the repository root
-      pathsToCheck <- gsub(paste0(getRepository(), .Platform$file.sep), "", pathsToCheck)
-      # what remains must be site, camera and data directories
+      # what remains must be site, camera and data directories, uniqueness is granted
       pathsToCheck <- strsplit(pathsToCheck, split=.Platform$file.sep)
       newData <- list()
       for(p in pathsToCheck) {
@@ -130,13 +128,17 @@ updateCatalog <- function(verbose=TRUE) {
         camera <- p[2]
         sdc <- p[3]
         if(verbose) message("  adding site: ", site, ", camera: ", camera, ", sdcard: ", sdc)
+        #REMOVE THAT, JUST a TRICK TO HAVE CONDITIONAL BREAKPOINTS
+        if(camera=='SBR-S004-C087' & sdc=='2019-03-20') {
+          a <- 0
+        }
         sitePath <- paste(getRepository(), site, sep=.Platform$file.sep)
         cameraPath <- paste(sitePath, camera, sep=.Platform$file.sep)
         dataPath <- paste(cameraPath, sdc, sep=.Platform$file.sep)
         newSiteMetadata <- .parseMetadata(path=sitePath)
         newCameraMetadata <- .parseMetadata(path=cameraPath)
         # then get EXIF data with
-        sdcData <- getEXIFData(dataPath, tz=newCameraMetadata[['timezone']])
+        sdcData <- getEXIFData(dataPath, tz=newCameraMetadata[['timezone']], verbose=TRUE)
         # data must be flattened and harmonised as per parse_catalog.R::.createCatalog() structure
         # fix some fields content, add camera metadata
         sdcData$Raw.Path <- paste(site, camera, sdc, sep=.Platform$file.sep) # store paths relative to getRepository()
