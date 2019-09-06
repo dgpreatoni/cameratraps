@@ -11,4 +11,4 @@ setRepository(theRepo)
 
 createCatalog()
 
-#ctl <- updateCatalog()
+updateCatalog()

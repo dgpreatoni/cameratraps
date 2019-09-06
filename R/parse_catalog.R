@@ -6,6 +6,7 @@
 #
 # version 0.2
 # created fra  20160826
+# updated prea 20190906 added warnings for missing files in SD directories
 # updated prea 20190808 cleaned up code, fixwd roxygen tags
 #         prea 20190506 cleaned up stuff, rewrote from scratch updateCatalog()
 #                       parallel experimental implementation of updateCatalog2
@@ -34,7 +35,15 @@
     for(c in cameraDirs) {
       dataDirs <- listDataDir(s, c)
       for(d in dataDirs) {
-        fileNames <- rbind(fileNames, data.frame(Raw.Names=list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste0(paste0(.getOption("known.extensions"),"$"), collapse="|")), Raw.Path=paste(theRepo, s, c, d, sep=.Platform$file.sep), stringsAsFactors=FALSE))
+        # in case a SD card dir is empty... warn and skip
+        curNames <- list.files(path=paste(theRepo, s, c, d, sep=.Platform$file.sep), pattern=paste0(paste0(.getOption("known.extensions"),"$"), collapse="|"))
+        curPaths <- paste(theRepo, s, c, d, sep=.Platform$file.sep)
+        if(length(curNames)>0) {
+          curFileNames <- data.frame(Raw.Names=curNames, Raw.Path=curPaths, stringsAsFactors=FALSE)
+          fileNames <- rbind(fileNames, curFileNames)
+        } else {
+          warning("Memory card directory empty: Site: ", s, " Camera: ", c, " directory: ", d, "\n  Skipping.\n", immediate.=TRUE)
+        }
       }
     }
   }

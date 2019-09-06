@@ -99,13 +99,13 @@
       if(!any(OlsonNames()==metadata$timezone)) { # exists, but no match with Olson names
         metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
         #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
-        warning("Time zone ", metadata$timezone , " is not a valid time zone identifier in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\nSee ?OlsonNames() for valid time zone codes.")
+        warning("Time zone ", metadata$timezone , " is not a valid time zone identifier in ", metadataFilePath, ".\n  Attempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n  See ?OlsonNames() for valid time zone codes.")
       }
     } else { # timezone not present in metadata file, use lat/lon, if they exist, if not, no timezone info
       if(exists('lat', where=metadata) & exists('lon', where=metadata)) {
         metadata[['timezone']] <- as.character(lutz::tz_lookup_coords(metadata$lat, metadata$lon, method="accurate", warn=FALSE))
         #metadata[['timezone']] <- as.character(GNtimezone(metadata$lat, metadata$lon)$timezoneId)
-        warning("Time zone information not found in ", metadataFilePath, ".\nAttempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n")
+        warning("Time zone information not found in ", metadataFilePath, ".\n  Attempting to derive time zone from latitude and longitude: ", metadata[['timezone']], ".\n")
       }
     }
     # *start:   | Camera start timestamp           | Use date and time expressed in ISO 8601 format  yyyy-MM-ddTHH:mm:ssK
